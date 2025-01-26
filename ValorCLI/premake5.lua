@@ -8,9 +8,6 @@ project "ValorCLI"
     targetdir ("%{wks.location}/bin/" .. outputdir .. "/%{prj.name}")
     objdir ("%{wks.location}/bin-int/" .. outputdir .. "/%{prj.name}")
 
-    pchheader "vlcpch.h"
-    pchsource "src/vlcpch.cpp"
-
     files
     {
         "src/**.h",
@@ -30,7 +27,7 @@ project "ValorCLI"
     includedirs
     {
         "src",
-        "%{wks.location}/Valor/src"
+        "../Valor/src"
     }
 
     filter "system:Windows"
