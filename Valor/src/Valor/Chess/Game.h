@@ -19,8 +19,8 @@ namespace Valor {
 		void UndoMove();
 
 		// Game state
-		bool IsDraw() const { return m_Board.IsStalemate() || m_Board.IsFiftyMoveRule() || IsThreefoldRepetition() || IsInsufficientMaterial(); }
-		bool IsGameOver() const { return m_Board.IsCheckmate() || IsDraw(); }
+		bool IsDraw() const { return m_Board.IsStalemate(m_Board.GetTurn()) || m_Board.IsFiftyMoveRule() || IsThreefoldRepetition() || IsInsufficientMaterial(); }
+		bool IsGameOver() const { return m_Board.IsCheckmate(m_Board.GetTurn()) || IsDraw(); }
 
 		bool IsThreefoldRepetition() const;
 		bool IsInsufficientMaterial() const;

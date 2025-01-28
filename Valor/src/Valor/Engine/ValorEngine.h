@@ -23,7 +23,7 @@ namespace Valor::Engine {
 		float Evaluate() { m_Score = Evaluate(*m_Game); return m_Score; }
 
 		void MakeMove(const Move& move) { m_Game->MakeMove(move); }
-		std::vector<Move> GenerateMoves() { return MoveGenerator::GenerateLegalMoves(m_Game->GetBoard()); }
+		std::vector<Move> GenerateMoves() { return MoveGenerator::GenerateLegalMoves(m_Game->GetBoard(), m_Game->GetBoard().GetTurn()); }
 
 		Move FindBestMove(int maxDepth, bool useAlphaBeta = true);
 

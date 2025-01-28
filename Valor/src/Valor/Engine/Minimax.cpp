@@ -34,7 +34,7 @@ namespace Valor::Engine {
 		float bestValue = isMaximizing ? -std::numeric_limits<float>::infinity()
 			: std::numeric_limits<float>::infinity();
 
-		auto moves = MoveGenerator::GenerateLegalMoves(game.GetBoard());
+		auto moves = MoveGenerator::GenerateLegalMoves(game.GetBoard(), game.GetBoard().GetTurn());
 		if (moves.empty()) return isMaximizing ? -std::numeric_limits<float>::infinity()
 			: std::numeric_limits<float>::infinity();
 
@@ -79,7 +79,7 @@ namespace Valor::Engine {
 			return Evaluate(game);
 		float bestValue = isMaximizing ? -std::numeric_limits<float>::infinity()
 			: std::numeric_limits<float>::infinity();
-		auto moves = MoveGenerator::GenerateLegalMoves(game.GetBoard());
+		auto moves = MoveGenerator::GenerateLegalMoves(game.GetBoard(), game.GetBoard().GetTurn());
 		for (const Move& move : moves)
 		{
 			game.MakeMove(move);

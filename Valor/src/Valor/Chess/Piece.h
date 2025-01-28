@@ -29,9 +29,11 @@ namespace Valor {
 			: Type(type), Color(color) {
 		}
 
-		char ToChar() const;
+		char ToChar() const { return PieceTypeToChar(Type); }
 
 		explicit operator char() const { return ToChar(); }
+
+		static char PieceTypeToChar(PieceType type);
 	};
 
 #define SWAP_COLOR(color) (color == PieceColor::White ? PieceColor::Black : PieceColor::White)

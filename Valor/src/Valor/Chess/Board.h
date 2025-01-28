@@ -15,13 +15,19 @@ namespace Valor {
 	struct Board
 	{
 	public:
-		Board() : m_Turn(PieceColor::White), m_EnPassantTarget(Tile::None) { Reset(); }
+		Board();
 		Board(const Board& other) = default;
 		~Board() = default;
 
 		void Reset();
 
+		Move BasicParseMove(Tile source, Tile target) const;
+		Move ParseMove(Tile source, Tile target) const;
 		void ApplyMove(const Move& move);
+		bool IsLegalMove(const Move& move) const;
+
+		bool IsAmbiguousMove(Tile source, Tile target, PieceType pieceType) const;
+		void ResolveDisambiguity(Tile source, Tile target, PieceType pieceType, uint8_t& disambiguityRank, uint8_t& disambiguityFile) const;
 
 		void RemovePiece(Tile tile);
 		void PlacePiece(Tile tile, PieceColor color, PieceType type);
@@ -41,6 +47,7 @@ namespace Valor {
 		Piece GetPiece(int rank, int file) const { return GetPiece(Tile(rank, file)); }
 
 		uint64_t Occupied() const { return m_AllWhite | m_AllBlack; }
+		bool IsOccupied(Tile tile) const { return Occupied() & (1ULL << tile); }
 
 		uint64_t GetPieceBitboard(PieceColor color, PieceType type) const;
 
@@ -65,11 +72,11 @@ namespace Valor {
 
 		int KingSquare(PieceColor color) const { return std::countr_zero(Kings(color)); }
 
-		bool IsSquareAttacked(int square) const;
+		bool IsSquareAttacked(int square, PieceColor attacker) const;
 
-		bool IsCheck() const { return IsSquareAttacked(KingSquare(SWAP_COLOR(m_Turn))); }
-		bool IsCheckmate() const { return IsCheck() && GenerateLegalMoves().empty(); }
-		bool IsStalemate() const { return !IsCheck() && GenerateLegalMoves().empty(); }
+		bool IsCheck(PieceColor attacker) const;
+		bool IsCheckmate(PieceColor attacker) const { return IsCheck(attacker) && GenerateLegalMoves().empty(); }
+		bool IsStalemate(PieceColor attacker) const { return !IsCheck(attacker) && GenerateLegalMoves().empty(); }
 	public:
 		constexpr static uint64_t FileA = 0x0101010101010101ull;
 		constexpr static uint64_t FileH = 0x8080808080808080ull;

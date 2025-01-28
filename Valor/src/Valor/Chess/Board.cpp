@@ -6,6 +6,12 @@
 
 namespace Valor {
 
+	Board::Board()
+		: m_Turn(PieceColor::White), m_EnPassantTarget(Tile::None)
+	{
+		Reset();
+	}
+
 	void Board::Reset()
 	{
 		m_Turn = PieceColor::White;
@@ -23,6 +29,99 @@ namespace Valor {
 		m_Kings = 0x1000000000000010ull;
 	}
 
+	Move Board::BasicParseMove(Tile source, Tile target) const
+	{
+		// Only checks for legality, does not handle ambiguity, check, checkmate, etc.
+		uint16_t flags = 0;
+		PieceType promotion = PieceType::None;
+		PieceType pieceType = GetPiece(source).Type;
+		PieceType capturedPiece = PieceType::None;
+
+		// Determine if the move is a capture
+		if (IsOccupied(target) && GetPiece(target).Color != GetTurn()) {
+			flags |= Move::captureFlag;
+			capturedPiece = GetPiece(target).Type;
+		}
+
+		// Handle pawn-specific metadata
+		if (pieceType == PieceType::Pawn) {
+			if (target == m_EnPassantTarget) {
+				flags |= Move::enPassantFlag;
+				capturedPiece = PieceType::Pawn;
+			}
+			// Handle promotion (promotion rank: 7 for white, 0 for black)
+			if (target.GetRank() == (GetTurn() == PieceColor::White ? 7 : 0)) {
+				flags |= Move::promotionFlag;
+				promotion = PieceType::Queen; // Default to queen; adjust if needed.
+			}
+		}
+
+		// Handle castling
+		if (pieceType == PieceType::King) {
+			if (std::abs(target.GetFile() - source.GetFile()) == 2) {
+				flags |= Move::castlingFlag;
+			}
+		}
+
+		return Move(source, target, flags, promotion, pieceType, capturedPiece);
+	}
+
+	Move Board::ParseMove(Tile source, Tile target) const
+	{
+		uint16_t flags = 0;
+		PieceType promotion = PieceType::None;
+		PieceType pieceType = GetPiece(source).Type;
+		PieceType capturedPiece = PieceType::None;
+
+		// Determine if the move is a capture
+		if (IsOccupied(target) && GetPiece(target).Color != GetTurn()) {
+			flags |= Move::captureFlag;
+			capturedPiece = GetPiece(target).Type;
+		}
+
+		// Handle pawn-specific metadata
+		if (pieceType == PieceType::Pawn) {
+			if (target == m_EnPassantTarget) {
+				flags |= Move::enPassantFlag;
+				capturedPiece = PieceType::Pawn;
+			}
+			// Handle promotion (promotion rank: 7 for white, 0 for black)
+			if (target.GetRank() == (GetTurn() == PieceColor::White ? 7 : 0)) {
+				flags |= Move::promotionFlag;
+				promotion = PieceType::Queen; // Default to queen; adjust if needed.
+			}
+		}
+
+		// Handle castling
+		if (pieceType == PieceType::King) {
+			if (std::abs(target.GetFile() - source.GetFile()) == 2) {
+				flags |= Move::castlingFlag;
+			}
+		}
+
+		// Disambiguity (rank/file)
+		uint8_t disambiguityRank = 0;
+		uint8_t disambiguityFile = 0;
+		if (IsAmbiguousMove(source, target, pieceType)) {
+			ResolveDisambiguity(source, target, pieceType, disambiguityRank, disambiguityFile);
+		}
+
+		// Simulate the move on a dummy board to check for legality
+		Board simulatedBoard = *this; // Copy the current board
+		Move move(source, target, flags, promotion, pieceType, capturedPiece, disambiguityRank, disambiguityFile);
+		simulatedBoard.ApplyMove(move);
+
+		// Check if the move causes check or checkmate
+		if (simulatedBoard.IsCheck(simulatedBoard.GetTurn())) {
+			flags |= Move::checkFlag;
+			if (simulatedBoard.IsCheckmate(simulatedBoard.GetTurn())) {
+				flags |= Move::checkmateFlag;
+			}
+		}
+
+		return Move(source, target, flags, promotion, pieceType, capturedPiece, disambiguityRank, disambiguityFile);
+	}
+
 	void Board::ApplyMove(const Move& move)
 	{
 		Tile source = move.GetSource();
@@ -33,7 +132,7 @@ namespace Valor {
 
 		// Update castling rights
 		UpdateCastlingRights(source, target);
-		m_HalfmoveCounter = OpponentPieces() & targetBit || m_Pawns & sourceBit ? 0 : m_HalfmoveCounter + 1;
+		m_HalfmoveCounter = move.IsCapture() || GetPiece(source).Type == PieceType::Pawn ? 0 : m_HalfmoveCounter + 1;
 
 		// Move the piece
 		Piece piece = GetPiece(source);
@@ -44,21 +143,21 @@ namespace Valor {
 		// Handle special moves
 		if (move.IsEnPassant())
 		{
-			Tile enPassantTarget = GetTurn() == PieceColor::White ? Tile(target.Rank() - 1, target.File()) : Tile(target.Rank() + 1, target.File());
+			Tile enPassantTarget = GetTurn() == PieceColor::White ? Tile(target.GetRank() - 1, target.GetFile()) : Tile(target.GetRank() + 1, target.GetFile());
 			RemovePiece(enPassantTarget);
 		}
 		else if (move.IsCastling())
 		{
 			Tile rookSource, rookTarget;
-			if (target.File() == 2) // Queen-side castling
+			if (target.GetFile() == 2) // Queen-side castling
 			{
-				rookSource = Tile(target.Rank(), 0);
-				rookTarget = Tile(target.Rank(), 3);
+				rookSource = Tile(target.GetRank(), 0);
+				rookTarget = Tile(target.GetRank(), 3);
 			}
 			else // King-side castling
 			{
-				rookSource = Tile(target.Rank(), 7);
-				rookTarget = Tile(target.Rank(), 5);
+				rookSource = Tile(target.GetRank(), 7);
+				rookTarget = Tile(target.GetRank(), 5);
 			}
 			Piece rook = GetPiece(rookSource);
 			RemovePiece(rookSource);
@@ -73,13 +172,62 @@ namespace Valor {
 			PlacePiece(target, promotedPiece.Color, promotedPiece.Type);
 		}
 		// Update en passant target square
-		if (piece.Type == PieceType::Pawn && std::abs(source.Rank() - target.Rank()) == 2)
-			m_EnPassantTarget = GetTurn() == PieceColor::White ? Tile(target.Rank() - 1, target.File()) : Tile(target.Rank() + 1, target.File());
+		if (piece.Type == PieceType::Pawn && std::abs(source.GetRank() - target.GetRank()) == 2)
+			m_EnPassantTarget = GetTurn() == PieceColor::White ? Tile(target.GetRank() - 1, target.GetFile()) : Tile(target.GetRank() + 1, target.GetFile());
 		else
 			m_EnPassantTarget = Tile::None;
 		// Toggle turn
 		ToggleTurn();
 	}
+
+	bool Board::IsLegalMove(const Move& move) const
+	{
+		std::vector<Move> moves = MoveGenerator::GenerateLegalMoves(*this, m_Turn);
+		for (const Move& legalMove : moves)
+		{
+			if (move.GetSource() == legalMove.GetSource() && move.GetTarget() == legalMove.GetTarget())
+				return true;
+		}
+		return false;
+	}
+
+	bool Board::IsAmbiguousMove(Tile source, Tile target, PieceType pieceType) const
+	{
+		uint64_t sameTypePieces = GetPieceBitboard(GetTurn(), pieceType);
+
+		sameTypePieces &= ~(1ULL << source);
+
+		uint64_t attackMask = MoveGenerator::AttackBitboard(*this, target, pieceType, m_Turn);
+
+		return (attackMask & sameTypePieces) != 0;
+	}
+
+
+	void Board::ResolveDisambiguity(Tile source, Tile target, PieceType pieceType, uint8_t& disambiguityRank, uint8_t& disambiguityFile) const
+	{
+		disambiguityRank = 0;
+		disambiguityFile = 0;
+
+		uint64_t sameTypePieces = GetPieceBitboard(GetTurn(), pieceType);
+
+		sameTypePieces &= ~(1ULL << source);
+
+		uint64_t attackMask = MoveGenerator::AttackBitboard(*this, target, pieceType, m_Turn);
+
+		uint64_t attackers = attackMask & sameTypePieces;
+
+		while (attackers) {
+			int square = std::countr_zero(attackers);
+			attackers &= attackers - 1;
+
+			Tile attackerTile(square / 8, square % 8);
+
+			// Check if this attacker shares the rank or file with the source
+			if (attackerTile.GetRank() == source.GetRank()) disambiguityFile = 1;
+			if (attackerTile.GetFile() == source.GetFile()) disambiguityRank = 1;
+		}
+	}
+
 
 	void Board::RemovePiece(Tile tile)
 	{
@@ -148,7 +296,7 @@ namespace Valor {
 		switch (pieceType)
 		{
 		case PieceType::Pawn:
-			return MoveGenerator::GeneratePawnMovesForSquare(*this, square);
+			return MoveGenerator::GeneratePawnMovesForSquare(*this, square, m_Turn);
 		case PieceType::Knight:
 			return MagicBitboard::s_KnightAttackMask[square];
 		case PieceType::Bishop:
@@ -156,8 +304,8 @@ namespace Valor {
 		case PieceType::Rook:
 			return MagicBitboard::CalculateRookAttacks(square, Occupied());
 		case PieceType::Queen:
-			return MagicBitboard::CalculateRookAttacks(square, Occupied()) |
-				MagicBitboard::CalculateBishopAttacks(square, Occupied());
+			return MagicBitboard::CalculateRookAttacks(square, Occupied())
+				| MagicBitboard::CalculateBishopAttacks(square, Occupied());
 		case PieceType::King:
 			return MagicBitboard::s_KingAttackMask[square];
 		default:
@@ -189,15 +337,38 @@ namespace Valor {
 		return Piece(PieceType::None, PieceColor::None);
 	}
 
-	bool Board::IsSquareAttacked(int square) const
+	bool Board::IsSquareAttacked(int square, PieceColor attacker) const
 	{
-		uint64_t attacks = MoveGenerator::AttackBitboard(*this);
-		return attacks & (1ULL << square);
+		// Pawns
+		uint64_t pawnAttacks = (attacker == PieceColor::White)
+			? ((Pawns(attacker) << 7) & ~FileH) | ((Pawns(attacker) << 9) & ~FileA)
+			: ((Pawns(attacker) >> 7) & ~FileA) | ((Pawns(attacker) >> 9) & ~FileH);
+		if (pawnAttacks & (1ULL << square)) return true;
+
+		// Knights
+		if (MoveGenerator::GetKnightMoves(square) & Knights(attacker)) return true;
+
+		// Kings
+		if (MoveGenerator::GetKingMoves(square) & Kings(attacker)) return true;
+
+		// Sliding Pieces
+		uint64_t blockers = Occupied();
+		if (MagicBitboard::GetSlidingAttack(square, blockers, PieceType::Rook) & Rooks(attacker)) return true;
+		if (MagicBitboard::GetSlidingAttack(square, blockers, PieceType::Bishop) & Bishops(attacker)) return true;
+		if (MagicBitboard::GetSlidingAttack(square, blockers, PieceType::Queen) & Queens(attacker)) return true;
+
+		return false;
+	}
+
+
+	bool Board::IsCheck(PieceColor attacker) const
+	{
+		return IsSquareAttacked(KingSquare(SWAP_COLOR(attacker)), attacker);
 	}
 
 	std::vector<Move> Board::GenerateLegalMoves() const
 	{
-		return MoveGenerator::GenerateLegalMoves(*this);
+		return MoveGenerator::GenerateLegalMoves(*this, m_Turn);
 	}
 
 }

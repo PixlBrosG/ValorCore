@@ -82,7 +82,7 @@ int main()
 	}
 
 	std::cout << std::endl;
-#else
+#elif 0
 	using namespace Valor;
 
 	bool playerTurn = true;
@@ -91,8 +91,10 @@ int main()
 	ClearConsole();
 	std::cout << engine.GetGame()->GetBoard() << std::endl;
 
-	while (!engine.GetGame()->IsGameOver()) {
-		if (playerTurn) {
+	while (!engine.GetGame()->IsGameOver())
+	{
+		if (playerTurn)
+		{
 			// Player's move
 			std::string inputMove;
 			std::cout << "Your move (e.g., e2e4): ";
@@ -101,6 +103,13 @@ int main()
 			// Parse input and make the move
 			try {
 				Move playerMove = Move::FromAlgebraic(inputMove);
+				playerMove = engine.GetGame()->GetBoard().ParseMove(playerMove.GetSource(), playerMove.GetTarget());
+				if (!engine.GetGame()->GetBoard().IsLegalMove(playerMove))
+				{
+					std::cout << "Invalid move: " << inputMove << '\n';
+					std::cin.get();  // Wait for Enter
+					continue;        // Retry move
+				}
 				engine.MakeMove(playerMove);
 
 				// Switch to bot's turn
@@ -112,10 +121,12 @@ int main()
 				continue;        // Retry move
 			}
 		}
-		else {
+		else
+		{
 			// Bot's move
 			std::cout << "Bot is thinking...\n";
-			Move bestMove = engine.FindBestMove(6);  // Adjust depth as needed
+			Move bestMove = engine.FindBestMove(4);  // Adjust depth as needed
+			bestMove = engine.GetGame()->GetBoard().ParseMove(bestMove.GetSource(), bestMove.GetTarget());
 			engine.MakeMove(bestMove);
 
 			// Clear console and display the board
@@ -136,10 +147,36 @@ int main()
 	std::cout << "Game over!\n";
 	std::cout << engine.GetGame()->GetBoard() << std::endl;
 
-	if (engine.GetGame()->GetBoard().IsCheckmate()) {
+	if (engine.GetGame()->GetBoard().IsCheckmate(SWAP_COLOR(engine.GetGame()->GetBoard().GetTurn()))) {
 		std::cout << (playerTurn ? "Bot wins!" : "You win!") << std::endl;
 	}
-	else if (engine.GetGame()->GetBoard().IsStalemate()) {
+	else if (engine.GetGame()->GetBoard().IsStalemate(SWAP_COLOR(engine.GetGame()->GetBoard().GetTurn()))) {
+		std::cout << "Stalemate!" << std::endl;
+	}
+	else {
+		std::cout << "Draw!" << std::endl;
+	}
+#else
+	int moves = 0;
+
+	while (!engine.GetGame()->IsGameOver() && moves < 25)
+	{
+		// bot plays against itself endlessly
+		Move bestMove = engine.FindBestMove(4);
+		engine.MakeMove(bestMove);
+
+		++moves;
+	}
+
+	// Game over - print result
+	ClearConsole();
+	std::cout << "Game over!\n";
+	std::cout << engine.GetGame()->GetBoard() << std::endl;
+
+	if (engine.GetGame()->GetBoard().IsCheckmate(SWAP_COLOR(engine.GetGame()->GetBoard().GetTurn()))) {
+		std::cout << "Bot wins!" << std::endl;
+	}
+	else if (engine.GetGame()->GetBoard().IsStalemate(SWAP_COLOR(engine.GetGame()->GetBoard().GetTurn()))) {
 		std::cout << "Stalemate!" << std::endl;
 	}
 	else {

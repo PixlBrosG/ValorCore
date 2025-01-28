@@ -1,6 +1,8 @@
 #include "vlpch.h"
 #include "Valor/Chess/MoveGeneration/MagicBitboard.h"
 
+#include "Valor/Chess/Tile.h"
+
 namespace Valor {
 
 	static bool s_Initialized = []() { MagicBitboard::Init(); return true; }();
@@ -64,18 +66,32 @@ namespace Valor {
 
 		for (int i = 0; i < numDirections; ++i) {
 			int direction = directions[i];
-			int sq = square + direction;
+			int sq = square;
 
-			// Traverse in the given direction until hitting a board edge or blocker
-			while (sq >= 0 && sq < 64 && std::abs((sq % 8) - (square % 8)) <= 1) {
-				attacks |= (1ULL << sq);
-				if (blockers & (1ULL << sq)) break; // Stop if blocker is encountered
+			while (true) {
 				sq += direction;
+
+				// Stop if the square goes out of bounds
+				if (sq < 0 || sq >= 64) break;
+
+				// Ensure sliding doesn't wrap around the board edges
+				int fromRank = square / 8;
+				int toRank = sq / 8;
+
+				// Horizontal moves (left/right)
+				if ((direction == 1 || direction == -1) && fromRank != toRank) break;
+
+				// Add the attack to the bitboard
+				attacks |= (1ULL << sq);
+
+				// Stop if there's a blocker
+				if (blockers & (1ULL << sq)) break;
 			}
 		}
 
 		return attacks;
 	}
+
 
 	uint64_t MagicBitboard::CalculateRookAttacks(int square, uint64_t blockers) {
 		static const int rookDirections[4] = { 1, -1, 8, -8 }; // Right, left, up, down

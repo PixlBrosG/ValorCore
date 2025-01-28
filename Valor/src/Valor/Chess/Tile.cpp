@@ -8,8 +8,8 @@ namespace Valor {
 	std::string Tile::ToAlgebraic() const
 	{
 		std::string result;
-		result += static_cast<char>('A' + File());
-		result += std::to_string(Rank() + 1);
+		result += FileAlgebraic();
+		result += RankAlgebraic();
 		return result;
 	}
 

@@ -17,11 +17,11 @@ namespace Valor {
 	uint64_t MoveGenerator::s_KingAttackMask[64] = { 0 };
 	uint64_t MoveGenerator::s_KnightAttackMask[64] = { 0 };
 
-	uint64_t MoveGenerator::GeneratePawnMoveBitboard(const Board& board)
+	uint64_t MoveGenerator::GeneratePawnMoveBitboard(const Board& board, PieceColor turn)
 	{
-		bool isWhiteTurn = board.GetTurn() == PieceColor::White;
+		bool isWhiteTurn = turn == PieceColor::White;
 
-		uint64_t pawns = board.Pawns(board.GetTurn());
+		uint64_t pawns = board.Pawns(turn);
 		uint64_t empty = ~board.Occupied();
 
 		// Single push: pawns move one square forward to an empty square
@@ -41,11 +41,11 @@ namespace Valor {
 		return singlePush | doublePush;
 	}
 
-	uint64_t MoveGenerator::GeneratePawnCaptureBitboard(const Board& board)
+	uint64_t MoveGenerator::GeneratePawnCaptureBitboard(const Board& board, PieceColor turn)
 	{
-		bool isWhiteTurn = board.GetTurn() == PieceColor::White;
+		bool isWhiteTurn = turn == PieceColor::White;
 
-		uint64_t pawns = board.Pawns(board.GetTurn());
+		uint64_t pawns = board.Pawns(turn);
 		uint64_t enemy = board.OpponentPieces();
 
 		uint64_t leftCapture = isWhiteTurn
@@ -59,14 +59,14 @@ namespace Valor {
 		return leftCapture | rightCapture;
 	}
 
-	uint64_t MoveGenerator::GenerateEnPassantMoveBitboard(const Board& board)
+	uint64_t MoveGenerator::GenerateEnPassantMoveBitboard(const Board& board, PieceColor turn)
 	{
 		if (board.GetEnPassantTarget() == Tile::None)
 			return 0;
 
-		bool isWhiteTurn = board.GetTurn() == PieceColor::White;
+		bool isWhiteTurn = turn == PieceColor::White;
 
-		uint64_t pawns = board.Pawns(board.GetTurn());
+		uint64_t pawns = board.Pawns(turn);
 		uint64_t enPassant = 1ull << board.GetEnPassantTarget();
 
 		uint64_t leftCapture = isWhiteTurn
@@ -80,11 +80,11 @@ namespace Valor {
 		return leftCapture | rightCapture;
 	}
 
-	uint64_t MoveGenerator::GenerateKnightMoveBitboard(const Board& board)
+	uint64_t MoveGenerator::GenerateKnightMoveBitboard(const Board& board, PieceColor turn)
 	{
-		bool isWhiteTurn = board.GetTurn() == PieceColor::White;
+		bool isWhiteTurn = turn == PieceColor::White;
 
-		uint64_t knights = board.Knights(board.GetTurn());
+		uint64_t knights = board.Knights(turn);
 		uint64_t emptyOrEnemy = ~board.PlayerPieces();
 
 		uint64_t moves = 0;
@@ -98,19 +98,19 @@ namespace Valor {
 		return moves;
 	}
 
-	uint64_t MoveGenerator::GenerateSlidingMoveBitboard(const Board& board, PieceType type)
+	uint64_t MoveGenerator::GenerateSlidingMoveBitboard(const Board& board, PieceType type, PieceColor turn)
 	{
 		uint64_t pieces;
 		switch (type)
 		{
 		case PieceType::Bishop:
-			pieces = board.Bishops(board.GetTurn());
+			pieces = board.Bishops(turn);
 			break;
 		case PieceType::Rook:
-			pieces = board.Rooks(board.GetTurn());
+			pieces = board.Rooks(turn);
 			break;
 		case PieceType::Queen:
-			pieces = board.Queens(board.GetTurn());
+			pieces = board.Queens(turn);
 			break;
 		default:
 			return 0;
@@ -132,87 +132,86 @@ namespace Valor {
 		return MagicBitboard::GetSlidingAttack(square, occupied, type);
 	}
 
-	uint64_t MoveGenerator::GenerateKingMoveBitboard(const Board& board)
+	uint64_t MoveGenerator::GenerateKingMoveBitboard(const Board& board, PieceColor turn)
 	{
-		bool isWhiteTurn = board.GetTurn() == PieceColor::White;
-		uint64_t king = board.Kings(board.GetTurn());
+		bool isWhiteTurn = turn == PieceColor::White;
+		uint64_t king = board.Kings(turn);
 		uint64_t emptyOrEnemy = ~board.PlayerPieces();
 
 		return s_KingAttackMask[std::countr_zero(king)] & emptyOrEnemy;
 	}
 
-	uint64_t MoveGenerator::GenerateCastlingMoveBitboard(const Board& board)
+	uint64_t MoveGenerator::GenerateCastlingMoveBitboard(const Board& board, PieceColor turn)
 	{
 		uint64_t moves = 0;
-		if (board.GetTurn() == PieceColor::White)
+		if (turn == PieceColor::White)
 		{
 			if (board.GetCastlingRights(PieceColor::White, true)  && !(board.Occupied() & 0x0000000000000060)) moves |= (1 << 62); // White kingside
 			if (board.GetCastlingRights(PieceColor::White, false) && !(board.Occupied() & 0x000000000000000E)) moves |= (1 << 58); // White queenside
 		}
 		else
 		{
-			if (board.GetCastlingRights(PieceColor::Black, true) && !(board.Occupied() & 0x6000000000000000)) moves |= (1 << 6);  // Black kingside
+			if (board.GetCastlingRights(PieceColor::Black, true)  && !(board.Occupied() & 0x6000000000000000)) moves |= (1 << 6);  // Black kingside
 			if (board.GetCastlingRights(PieceColor::Black, false) && !(board.Occupied() & 0x0E00000000000000)) moves |= (1 << 2);  // Black queenside
 		}
 
 		return moves;
 	}
 
-	std::vector<Move> MoveGenerator::GeneratePseudoLegalMoves(const Board& board)
+	std::vector<Move> MoveGenerator::GeneratePseudoLegalMoves(const Board& board, PieceColor turn)
 	{
 		std::vector<Move> moves;
 		moves.reserve(200); // Preallocate sufficient space for efficiency
 
 		// Pawn moves
-		uint64_t pawnMoves = GeneratePawnMoveBitboard(board);
-		auto pawnMoveList = GenerateMovesFromBitboard(board, pawnMoves, PieceType::Pawn);
+		uint64_t pawnMoves = GeneratePawnMoveBitboard(board, turn);
+		auto pawnMoveList = GenerateMovesFromBitboard(board, pawnMoves, PieceType::Pawn, turn);
 		moves.insert(moves.end(), pawnMoveList.begin(), pawnMoveList.end());
 
-		uint64_t pawnCaptures = GeneratePawnCaptureBitboard(board);
-		auto pawnCaptureList = GenerateMovesFromBitboard(board, pawnCaptures, PieceType::Pawn, Move::captureFlag);
+		uint64_t pawnCaptures = GeneratePawnCaptureBitboard(board, turn);
+		auto pawnCaptureList = GenerateMovesFromBitboard(board, pawnCaptures, PieceType::Pawn, turn);
 		moves.insert(moves.end(), pawnCaptureList.begin(), pawnCaptureList.end());
 
-		uint64_t enPassantMoves = GenerateEnPassantMoveBitboard(board);
-		auto enPassantList = GenerateMovesFromBitboard(board, enPassantMoves, PieceType::Pawn, Move::enPassantFlag);
+		uint64_t enPassantMoves = GenerateEnPassantMoveBitboard(board, turn);
+		auto enPassantList = GenerateMovesFromBitboard(board, enPassantMoves, PieceType::Pawn, turn);
 		moves.insert(moves.end(), enPassantList.begin(), enPassantList.end());
 
 		// Knight moves
-		uint64_t knightMoves = GenerateKnightMoveBitboard(board);
-		auto knightMoveList = GenerateMovesFromBitboard(board, knightMoves, PieceType::Knight);
+		uint64_t knightMoves = GenerateKnightMoveBitboard(board, turn);
+		auto knightMoveList = GenerateMovesFromBitboard(board, knightMoves, PieceType::Knight, turn);
 		moves.insert(moves.end(), knightMoveList.begin(), knightMoveList.end());
 
 		// Sliding moves (Bishop, Rook, Queen)
-		uint64_t bishopMoves = GenerateSlidingMoveBitboard(board, PieceType::Bishop);
-		auto bishopMoveList = GenerateMovesFromBitboard(board, bishopMoves, PieceType::Bishop);
+		uint64_t bishopMoves = GenerateSlidingMoveBitboard(board, PieceType::Bishop, turn);
+		auto bishopMoveList = GenerateMovesFromBitboard(board, bishopMoves, PieceType::Bishop, turn);
 		moves.insert(moves.end(), bishopMoveList.begin(), bishopMoveList.end());
 
-		uint64_t rookMoves = GenerateSlidingMoveBitboard(board, PieceType::Rook);
-		auto rookMoveList = GenerateMovesFromBitboard(board, rookMoves, PieceType::Rook);
+		uint64_t rookMoves = GenerateSlidingMoveBitboard(board, PieceType::Rook, turn);
+		auto rookMoveList = GenerateMovesFromBitboard(board, rookMoves, PieceType::Rook, turn);
 		moves.insert(moves.end(), rookMoveList.begin(), rookMoveList.end());
 
-		uint64_t queenMoves = GenerateSlidingMoveBitboard(board, PieceType::Queen);
-		auto queenMoveList = GenerateMovesFromBitboard(board, queenMoves, PieceType::Queen);
+		uint64_t queenMoves = GenerateSlidingMoveBitboard(board, PieceType::Queen, turn);
+		auto queenMoveList = GenerateMovesFromBitboard(board, queenMoves, PieceType::Queen, turn);
 		moves.insert(moves.end(), queenMoveList.begin(), queenMoveList.end());
 
 		// King moves
-		uint64_t kingMoves = GenerateKingMoveBitboard(board);
-		auto kingMoveList = GenerateMovesFromBitboard(board, kingMoves, PieceType::King);
+		uint64_t kingMoves = GenerateKingMoveBitboard(board, turn);
+		auto kingMoveList = GenerateMovesFromBitboard(board, kingMoves, PieceType::King, turn);
 		moves.insert(moves.end(), kingMoveList.begin(), kingMoveList.end());
 
 		// Castling moves
-		uint64_t castlingMoves = GenerateCastlingMoveBitboard(board);
-		auto castlingMoveList = GenerateMovesFromBitboard(board, castlingMoves, PieceType::King, Move::castlingFlag);
+		uint64_t castlingMoves = GenerateCastlingMoveBitboard(board, turn);
+		auto castlingMoveList = GenerateMovesFromBitboard(board, castlingMoves, PieceType::King, turn);
 		moves.insert(moves.end(), castlingMoveList.begin(), castlingMoveList.end());
 
 		return moves;
 	}
 
-
-	std::vector<Move> MoveGenerator::GenerateMovesFromBitboard(const Board& board, uint64_t bitboard, PieceType pieceType, uint8_t flags)
+	std::vector<Move> MoveGenerator::GenerateMovesFromBitboard(const Board& board, uint64_t bitboard, PieceType pieceType, PieceColor turn)
 	{
 		std::vector<Move> moves;
 
-		uint64_t pieces = board.GetPieceBitboard(board.GetTurn(), pieceType);
+		uint64_t pieces = board.GetPieceBitboard(turn, pieceType);
 
 		while (pieces) {
 			// Get the index of the current piece's square
@@ -228,7 +227,7 @@ namespace Valor {
 
 				// Add the move to the list
 				if (!(board.PlayerPieces() & (1ULL << targetSquare)))
-					moves.emplace_back(source, target, flags);
+					moves.emplace_back(board.BasicParseMove(source, target));
 
 				// Clear the least significant bit in the targets
 				targets &= targets - 1;
@@ -241,42 +240,64 @@ namespace Valor {
 		return moves;
 	}
 
-	std::vector<Move> MoveGenerator::GenerateLegalMoves(const Board& board)
+	std::vector<Move> MoveGenerator::GenerateLegalMoves(const Board& board, PieceColor turn)
 	{
-		std::vector<Move> moves = GeneratePseudoLegalMoves(board);
+		std::vector<Move> moves = GeneratePseudoLegalMoves(board, turn);
 		std::vector<Move> legalMoves;
 		legalMoves.reserve(moves.size());
+
 		for (const Move& move : moves)
 		{
 			Board tempBoard = board;
 			tempBoard.ApplyMove(move);
-			if (!tempBoard.IsCheck())
+			if (!tempBoard.IsCheck(tempBoard.GetTurn()))
 				legalMoves.emplace_back(move);
 		}
 
 		return legalMoves;
 	}
 
-	uint64_t MoveGenerator::AttackBitboard(const Board& board)
+	uint64_t MoveGenerator::AttackBitboard(const Board& board, PieceColor turn)
 	{
 		uint64_t attacks = 0;
-		attacks |= GeneratePawnCaptureBitboard(board);
-		attacks |= GenerateEnPassantMoveBitboard(board);
-		attacks |= GenerateKnightMoveBitboard(board);
-		attacks |= GenerateSlidingMoveBitboard(board, PieceType::Bishop);
-		attacks |= GenerateSlidingMoveBitboard(board, PieceType::Rook);
-		attacks |= GenerateSlidingMoveBitboard(board, PieceType::Queen);
-		attacks |= GenerateKingMoveBitboard(board);
+		attacks |= GeneratePawnCaptureBitboard(board, turn);
+		attacks |= GenerateEnPassantMoveBitboard(board, turn);
+		attacks |= GenerateKnightMoveBitboard(board, turn);
+		attacks |= GenerateSlidingMoveBitboard(board, PieceType::Bishop, turn);
+		attacks |= GenerateSlidingMoveBitboard(board, PieceType::Rook, turn);
+		attacks |= GenerateSlidingMoveBitboard(board, PieceType::Queen, turn);
+		attacks |= GenerateKingMoveBitboard(board, turn);
 		return attacks;
 	}
 
-	uint64_t MoveGenerator::GeneratePawnMovesForSquare(const Board& board, int square)
+	uint64_t MoveGenerator::AttackBitboard(const Board& board, int square, PieceType pieceType, PieceColor turn)
+	{
+		switch (pieceType)
+		{
+		case PieceType::Pawn:
+			return GeneratePawnMovesForSquare(board, square, turn);
+		case PieceType::Knight:
+			return s_KnightAttackMask[square];
+		case PieceType::Bishop:
+			return GenerateSlidingAttackBitboard(square, board.Occupied(), PieceType::Bishop);
+		case PieceType::Rook:
+			return GenerateSlidingAttackBitboard(square, board.Occupied(), PieceType::Rook);
+		case PieceType::Queen:
+			return GenerateSlidingAttackBitboard(square, board.Occupied(), PieceType::Queen);
+		case PieceType::King:
+			return s_KingAttackMask[square];
+		default:
+			return 0;
+		}
+	}
+
+	uint64_t MoveGenerator::GeneratePawnMovesForSquare(const Board& board, int square, PieceColor turn)
 	{
 		uint64_t moves = 0;
 
-		bool isWhiteTurn = board.GetTurn() == PieceColor::White;
+		bool isWhiteTurn = turn == PieceColor::White;
 
-		uint64_t pawns = board.Pawns(board.GetTurn());
+		uint64_t pawns = board.Pawns(turn);
 		uint64_t empty = ~board.Occupied();
 		uint64_t opponentPieces = board.OpponentPieces();
 

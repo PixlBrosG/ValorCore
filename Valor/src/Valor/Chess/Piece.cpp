@@ -3,23 +3,18 @@
 
 namespace Valor {
 
-	char Piece::ToChar() const
+	char Piece::PieceTypeToChar(PieceType type)
 	{
-		if (Color == PieceColor::None || Type == PieceType::None)
-			return ' ';
-
-		char pieceChar = ' ';
-		switch (Type)
+		switch (type)
 		{
-			case PieceType::Pawn: pieceChar = 'P'; break;
-			case PieceType::Knight: pieceChar = 'N'; break;
-			case PieceType::Bishop: pieceChar = 'B'; break;
-			case PieceType::Rook: pieceChar = 'R'; break;
-			case PieceType::Queen: pieceChar = 'Q'; break;
-			case PieceType::King: pieceChar = 'K'; break;
+			case PieceType::Pawn: return 'P';
+			case PieceType::Knight: return 'N';
+			case PieceType::Bishop: return 'B';
+			case PieceType::Rook: return 'R';
+			case PieceType::Queen: return 'Q';
+			case PieceType::King: return 'K';
+			default: return ' ';
 		}
-
-		return Color == PieceColor::White ? pieceChar : std::tolower(pieceChar);
 	}
 
 }

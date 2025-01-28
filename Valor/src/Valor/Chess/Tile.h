@@ -14,13 +14,17 @@ namespace Valor {
 		Tile(uint8_t tileIndex)
 			: TileIndex(tileIndex) {}
 		Tile(uint8_t rank, uint8_t file)
-			: TileIndex(rank * 8 + file) {}
+			: TileIndex(rank * 8 + file) {
+		}
 
-		uint8_t Rank() const { return TileIndex / 8; }
-		uint8_t File() const { return TileIndex % 8; }
+		uint8_t GetRank() const { return TileIndex / 8; }
+		uint8_t GetFile() const { return TileIndex % 8; }
 
 		std::string ToAlgebraic() const;
 		static Tile FromAlgebraic(const std::string& algebraic);
+
+		char FileAlgebraic() const { return 'a' + GetFile(); }
+		char RankAlgebraic() const { return '1' + GetRank(); }
 
 		bool operator==(const Tile& other) const { return TileIndex == other.TileIndex; }
 
@@ -47,7 +51,7 @@ namespace std {
 
 	inline ostream& operator<<(ostream& os, const Valor::Tile& tile)
 	{
-		os << static_cast<char>('A' + tile.File()) << tile.Rank() + 1;
+		os << tile.ToAlgebraic();
 		return os;
 	}
 
