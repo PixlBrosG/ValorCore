@@ -1,7 +1,7 @@
 #include "vlpch.h"
 #include "Valor/Engine/Minimax.h"
 
-#include "Valor/Chess/MoveGenerator.h"
+#include "Valor/Chess/MoveGeneration/MoveGenerator.h"
 
 namespace Valor::Engine {
 
@@ -9,18 +9,18 @@ namespace Valor::Engine {
 	{
 		m_MaxDepth = maxDepth;
 		m_Evaluator = evaluator;
-		m_BestMove = Move();
+		m_BestMove = Move(Tile::None, Tile::None);
 
 		if (m_UseAlphaBeta)
 		{
 			constexpr float alpha = -std::numeric_limits<float>::infinity();
 			constexpr float beta = std::numeric_limits<float>::infinity();
 
-			MinimaxWithAlphaBeta(game, maxDepth, alpha, beta, game.GetTurn() == PieceColor::White);
+			MinimaxWithAlphaBeta(game, maxDepth, alpha, beta, game.GetBoard().GetTurn() == PieceColor::White);
 		}
 		else
 		{
-			MinimaxWithoutAlphaBeta(game, maxDepth, game.GetTurn() == PieceColor::White);
+			MinimaxWithoutAlphaBeta(game, maxDepth, game.GetBoard().GetTurn() == PieceColor::White);
 		}
 
 		return m_BestMove;
@@ -34,7 +34,7 @@ namespace Valor::Engine {
 		float bestValue = isMaximizing ? -std::numeric_limits<float>::infinity()
 			: std::numeric_limits<float>::infinity();
 
-		auto moves = MoveGenerator::GenerateMoves(game);
+		auto moves = MoveGenerator::GenerateLegalMoves(game.GetBoard());
 		if (moves.empty()) return isMaximizing ? -std::numeric_limits<float>::infinity()
 			: std::numeric_limits<float>::infinity();
 
@@ -79,7 +79,7 @@ namespace Valor::Engine {
 			return Evaluate(game);
 		float bestValue = isMaximizing ? -std::numeric_limits<float>::infinity()
 			: std::numeric_limits<float>::infinity();
-		auto moves = MoveGenerator::GenerateMoves(game);
+		auto moves = MoveGenerator::GenerateLegalMoves(game.GetBoard());
 		for (const Move& move : moves)
 		{
 			game.MakeMove(move);

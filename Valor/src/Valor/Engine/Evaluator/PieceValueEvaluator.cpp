@@ -1,52 +1,55 @@
 #include "vlpch.h"
 #include "Valor/Engine/Evaluator/Evaluator.h"
 
+#include <bit>
+
 namespace Valor {
 
-	float PieceValueEvaluator::Evaluate(const Game& game)
+	float PieceValueEvaluator::Evaluate(const Board& board)
 	{
-		if (game.IsCheckmate())
+		if (board.IsCheckmate())
 		{
-			return game.GetTurn() == PieceColor::White ? -std::numeric_limits<float>::infinity() : std::numeric_limits<float>::infinity();
+			return board.GetTurn() == PieceColor::White ? std::numeric_limits<float>::infinity() : -std::numeric_limits<float>::infinity();
 		}
-		else if (game.IsStalemate())
+		else if (board.IsStalemate())
 		{
 			return 0.0f;
 		}
 
 		float score = 0.0f;
 
-		for (int rank = 0; rank < 8; rank++)
+		uint64_t allWhite = board.AllPieces(PieceColor::White);
+
+		uint64_t pawns = board.Pawns();
+		while (pawns)
 		{
-			for (int file = 0; file < 8; file++)
-			{
-				Piece piece = game.GetBoard().GetPiece(rank, file);
-				if (piece.Color == PieceColor::None)
-					continue;
-				float value = 0.0f;
-				switch (piece.Type)
-				{
-				case PieceType::Pawn:
-					value = 1.0f;
-					break;
-				case PieceType::Knight:
-					value = 3.0f;
-					break;
-				case PieceType::Bishop:
-					value = 3.0f;
-					break;
-				case PieceType::Rook:
-					value = 5.0f;
-					break;
-				case PieceType::Queen:
-					value = 9.0f;
-					break;
-				case PieceType::King:
-					value = 0.0f;
-					break;
-				}
-				score += piece.Color == PieceColor::White ? value : -value;
-			}
+			int square = std::countr_zero(pawns);
+			score += 1.0f * (allWhite & (1ULL << square) ? 1 : -1);
+			pawns &= pawns - 1;
+		}
+
+		uint64_t knightsAndBishops = board.Knights() | board.Bishops();
+		while (knightsAndBishops)
+		{
+			int square = std::countr_zero(knightsAndBishops);
+			score += 3.0f * (allWhite & (1ULL << square) ? 1 : -1);
+			knightsAndBishops &= knightsAndBishops - 1;
+		}
+
+		uint64_t rooks = board.Rooks();
+		while (rooks)
+		{
+			int square = std::countr_zero(rooks);
+			score += 5.0f * (allWhite & (1ULL << square) ? 1 : -1);
+			rooks &= rooks - 1;
+		}
+
+		uint64_t queens = board.Queens();
+		while (queens)
+		{
+			int square = std::countr_zero(queens);
+			score += 9.0f * (allWhite & (1ULL << square) ? 1 : -1);
+			queens &= queens - 1;
 		}
 
 		return score;

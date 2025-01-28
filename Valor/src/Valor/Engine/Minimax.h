@@ -16,12 +16,12 @@ namespace Valor::Engine {
 		bool m_UseAlphaBeta;
 		int m_MaxDepth;
 		Evaluator* m_Evaluator;
-		Move m_BestMove;
+		Move m_BestMove = Move(Tile::None, Tile::None);
 
 		float MinimaxWithoutAlphaBeta(Game& game, int depth, bool isMaximizing);
 		float MinimaxWithAlphaBeta(Game& game, int depth, float alpha, float beta, bool isMaximizing);
 
-		float Evaluate(const Game& game) const { return m_Evaluator->Evaluate(game); }
+		float Evaluate(const Game& game) const { return m_Evaluator->Evaluate(game.GetBoard()); }
 	};
 
 }

@@ -1,112 +1,203 @@
 #include "vlpch.h"
 #include "Valor/Chess/Board.h"
 
-namespace Valor {
+#include "Valor/Chess/MoveGeneration/MoveGenerator.h"
+#include "Valor/Chess/MoveGeneration/MagicBitboard.h"
 
-	Board::Board()
-	{
-		Reset();
-	}
+namespace Valor {
 
 	void Board::Reset()
 	{
-		// Clear the board
-		for (int rank = 0; rank < 8; rank++)
+		m_Turn = PieceColor::White;
+		m_HalfmoveCounter = 0;
+		m_EnPassantTarget = Tile::None;
+
+		m_AllWhite = 0x000000000000FFFFull;
+		m_AllBlack = 0xFFFF000000000000ull;
+
+		m_Pawns = 0x00FF00000000FF00ull;
+		m_Knights = 0x4200000000000042ull;
+		m_Bishops = 0x2400000000000024ull;
+		m_Rooks = 0x8100000000000081ull;
+		m_Queens = 0x0800000000000008ull;
+		m_Kings = 0x1000000000000010ull;
+	}
+
+	void Board::ApplyMove(const Move& move)
+	{
+		Tile source = move.GetSource();
+		Tile target = move.GetTarget();
+
+		uint64_t sourceBit = 1ULL << source;
+		uint64_t targetBit = 1ULL << target;
+
+		// Update castling rights
+		UpdateCastlingRights(source, target);
+		m_HalfmoveCounter = OpponentPieces() & targetBit || m_Pawns & sourceBit ? 0 : m_HalfmoveCounter + 1;
+
+		// Move the piece
+		Piece piece = GetPiece(source);
+		RemovePiece(source);
+		RemovePiece(target);
+		PlacePiece(target, piece.Color, piece.Type);
+
+		// Handle special moves
+		if (move.IsEnPassant())
 		{
-			for (int file = 0; file < 8; file++)
+			Tile enPassantTarget = GetTurn() == PieceColor::White ? Tile(target.Rank() - 1, target.File()) : Tile(target.Rank() + 1, target.File());
+			RemovePiece(enPassantTarget);
+		}
+		else if (move.IsCastling())
+		{
+			Tile rookSource, rookTarget;
+			if (target.File() == 2) // Queen-side castling
 			{
-				m_Board[rank][file] = Piece(PieceType::None, PieceColor::None);
+				rookSource = Tile(target.Rank(), 0);
+				rookTarget = Tile(target.Rank(), 3);
 			}
+			else // King-side castling
+			{
+				rookSource = Tile(target.Rank(), 7);
+				rookTarget = Tile(target.Rank(), 5);
+			}
+			Piece rook = GetPiece(rookSource);
+			RemovePiece(rookSource);
+			RemovePiece(rookTarget);
+			PlacePiece(rookTarget, rook.Color, rook.Type);
 		}
-
-		// Set up the white pieces
-		m_Board[0][0] = Piece(PieceType::Rook, PieceColor::White);
-		m_Board[0][1] = Piece(PieceType::Knight, PieceColor::White);
-		m_Board[0][2] = Piece(PieceType::Bishop, PieceColor::White);
-		m_Board[0][3] = Piece(PieceType::Queen, PieceColor::White);
-		m_Board[0][4] = Piece(PieceType::King, PieceColor::White);
-		m_Board[0][5] = Piece(PieceType::Bishop, PieceColor::White);
-		m_Board[0][6] = Piece(PieceType::Knight, PieceColor::White);
-		m_Board[0][7] = Piece(PieceType::Rook, PieceColor::White);
-		for (int file = 0; file < 8; file++)
+		// Handle promotion
+		if (move.IsPromotion())
 		{
-			m_Board[1][file] = Piece(PieceType::Pawn, PieceColor::White);
+			Piece promotedPiece = Piece(static_cast<PieceType>(move.GetPromotion()), piece.Color);
+			RemovePiece(target);
+			PlacePiece(target, promotedPiece.Color, promotedPiece.Type);
 		}
+		// Update en passant target square
+		if (piece.Type == PieceType::Pawn && std::abs(source.Rank() - target.Rank()) == 2)
+			m_EnPassantTarget = GetTurn() == PieceColor::White ? Tile(target.Rank() - 1, target.File()) : Tile(target.Rank() + 1, target.File());
+		else
+			m_EnPassantTarget = Tile::None;
+		// Toggle turn
+		ToggleTurn();
+	}
 
-		// Set up the black pieces
-		m_Board[7][0] = Piece(PieceType::Rook, PieceColor::Black);
-		m_Board[7][1] = Piece(PieceType::Knight, PieceColor::Black);
-		m_Board[7][2] = Piece(PieceType::Bishop, PieceColor::Black);
-		m_Board[7][3] = Piece(PieceType::Queen, PieceColor::Black);
-		m_Board[7][4] = Piece(PieceType::King, PieceColor::Black);
-		m_Board[7][5] = Piece(PieceType::Bishop, PieceColor::Black);
-		m_Board[7][6] = Piece(PieceType::Knight, PieceColor::Black);
-		m_Board[7][7] = Piece(PieceType::Rook, PieceColor::Black);
-		for (int file = 0; file < 8; file++)
+	void Board::RemovePiece(Tile tile)
+	{
+		uint64_t bit = 1ULL << tile;
+		m_AllWhite &= ~bit;
+		m_AllBlack &= ~bit;
+		m_Pawns &= ~bit;
+		m_Knights &= ~bit;
+		m_Bishops &= ~bit;
+		m_Rooks &= ~bit;
+		m_Queens &= ~bit;
+		m_Kings &= ~bit;
+	}
+
+	void Board::PlacePiece(Tile tile, PieceColor color, PieceType type)
+	{
+		uint64_t bit = 1ULL << tile;
+		if (color == PieceColor::White)
+			m_AllWhite |= bit;
+		else
+			m_AllBlack |= bit;
+		switch (type)
 		{
-			m_Board[6][file] = Piece(PieceType::Pawn, PieceColor::Black);
+			case PieceType::Pawn:   m_Pawns |= bit; break;
+			case PieceType::Knight: m_Knights |= bit; break;
+			case PieceType::Bishop: m_Bishops |= bit; break;
+			case PieceType::Rook:   m_Rooks |= bit; break;
+			case PieceType::Queen:  m_Queens |= bit; break;
+			case PieceType::King:   m_Kings |= bit; break;
 		}
 	}
 
-	void Board::UpdateBitBoards()
+	void Board::UpdateCastlingRights(Tile source, Tile target)
 	{
-		for (int color = 0; color < 2; color++)
-		{
-			for (int piece = 0; piece < 6; piece++)
-			{
-				m_BitBoards[color][piece] = 0;
-			}
+		if (source == Tile(0, 4) || source == Tile(7, 4)) { // King moves
+			m_CastlingRights[static_cast<size_t>(GetTurn()) - 1][0] = false; // Queen-side
+			m_CastlingRights[static_cast<size_t>(GetTurn()) - 1][1] = false; // King-side
 		}
 
-		for (int rank = 0; rank < 8; rank++)
+		else if (source == Tile(0, 0) || target == Tile(0, 0)) // Rook moves (white queen-side)
+			m_CastlingRights[static_cast<size_t>(PieceColor::White) - 1][0] = false;
+		else if (source == Tile(0, 7) || target == Tile(0, 7)) // Rook moves (white king-side)
+			m_CastlingRights[static_cast<size_t>(PieceColor::White) - 1][1] = false;
+
+		else if (source == Tile(7, 0) || target == Tile(7, 0)) // Rook moves (black queen-side)
+			m_CastlingRights[static_cast<size_t>(PieceColor::Black) - 1][0] = false;
+		else if (source == Tile(7, 7) || target == Tile(7, 7)) // Rook moves (black king-side)
+			m_CastlingRights[static_cast<size_t>(PieceColor::Black) - 1][1] = false;
+	}
+
+	uint64_t Board::GetPieceBitboard(PieceColor color, PieceType type) const
+	{
+		switch (type)
 		{
-			for (int file = 0; file < 8; file++)
-			{
-				const Piece& piece = m_Board[rank][file];
-				if (piece.Color != PieceColor::None)
-				{
-					int colorIdx = piece.Color == PieceColor::White ? 0 : 1;
-					int typeIdx = static_cast<int>(piece.Type) - 1; // PieceType::None is 0
-					int index = rank * 8 + file;
-					m_BitBoards[colorIdx][typeIdx] |= 1ULL << index;
-				}
-			}
+			case PieceType::Pawn:   return Pawns(color);
+			case PieceType::Knight: return Knights(color);
+			case PieceType::Bishop: return Bishops(color);
+			case PieceType::Rook:   return Rooks(color);
+			case PieceType::Queen:  return Queens(color);
+			case PieceType::King:   return Kings(color);
 		}
 	}
 
-	void Board::MovePiece(const Move& move)
+	uint64_t Board::GetMoveMask(int square, PieceType pieceType) const
 	{
-		m_LastMove = move;
-		m_Board[move.Target.Rank][move.Target.File] = m_Board[move.Source.Rank][move.Source.File];
-		m_Board[move.Source.Rank][move.Source.File] = Piece();
+		switch (pieceType)
+		{
+		case PieceType::Pawn:
+			return MoveGenerator::GeneratePawnMovesForSquare(*this, square);
+		case PieceType::Knight:
+			return MagicBitboard::s_KnightAttackMask[square];
+		case PieceType::Bishop:
+			return MagicBitboard::CalculateBishopAttacks(square, Occupied());
+		case PieceType::Rook:
+			return MagicBitboard::CalculateRookAttacks(square, Occupied());
+		case PieceType::Queen:
+			return MagicBitboard::CalculateRookAttacks(square, Occupied()) |
+				MagicBitboard::CalculateBishopAttacks(square, Occupied());
+		case PieceType::King:
+			return MagicBitboard::s_KingAttackMask[square];
+		default:
+			return 0;
+		}
 	}
 
-	Tile Board::FindKing(PieceColor color) const
+	Piece Board::GetPiece(Tile tile) const
 	{
-		for (int rank = 0; rank < 8; rank++)
-		{
-			for (int file = 0; file < 8; file++)
-			{
-				const Piece& piece = m_Board[rank][file];
-				if (piece.Type == PieceType::King && piece.Color == color)
-					return { rank, file };
-			}
+		uint64_t mask = 1ULL << tile;
+
+		if (mask & m_AllWhite) {
+			if (mask & m_Pawns) return Piece(PieceType::Pawn, PieceColor::White);
+			if (mask & m_Knights) return Piece(PieceType::Knight, PieceColor::White);
+			if (mask & m_Bishops) return Piece(PieceType::Bishop, PieceColor::White);
+			if (mask & m_Rooks) return Piece(PieceType::Rook, PieceColor::White);
+			if (mask & m_Queens) return Piece(PieceType::Queen, PieceColor::White);
+			if (mask & m_Kings) return Piece(PieceType::King, PieceColor::White);
 		}
-		return { -1, -1 };
+		else if (mask & m_AllBlack) {
+			if (mask & m_Pawns) return Piece(PieceType::Pawn, PieceColor::Black);
+			if (mask & m_Knights) return Piece(PieceType::Knight, PieceColor::Black);
+			if (mask & m_Bishops) return Piece(PieceType::Bishop, PieceColor::Black);
+			if (mask & m_Rooks) return Piece(PieceType::Rook, PieceColor::Black);
+			if (mask & m_Queens) return Piece(PieceType::Queen, PieceColor::Black);
+			if (mask & m_Kings) return Piece(PieceType::King, PieceColor::Black);
+		}
+
+		return Piece(PieceType::None, PieceColor::None);
 	}
 
-	size_t Board::GetHash() const
+	bool Board::IsSquareAttacked(int square) const
 	{
-		size_t hash = 0;
-		for (int rank = 0; rank < 8; rank++)
-		{
-			for (int file = 0; file < 8; file++)
-			{
-				const Piece& piece = m_Board[rank][file];
-				hash ^= static_cast<size_t>(piece.Type) << (rank * 8 + file);
-			}
-		}
-		return hash;
+		uint64_t attacks = MoveGenerator::AttackBitboard(*this);
+		return attacks & (1ULL << square);
+	}
+
+	std::vector<Move> Board::GenerateLegalMoves() const
+	{
+		return MoveGenerator::GenerateLegalMoves(*this);
 	}
 
 }

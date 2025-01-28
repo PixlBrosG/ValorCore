@@ -1,51 +1,49 @@
 #pragma once
 
 #include "Valor/Chess/Tile.h"
-#include "Valor/Chess/Piece.h"
 
 #include <string>
-#include <iostream>
 
 namespace Valor {
 
-	enum class MoveStatus
-	{
-		Normal,
-		Check,
-		Checkmate,
-		Stalemate
-	};
-
 	struct Move
 	{
-		Tile Source, Target;
-		PieceType Promotion = PieceType::None;
+		uint32_t Data; // [6] source, [6] target, [4] flags, [4] promotion, [4] pieceType, [4] capturedPiece, [4] reserved
 
-		MoveStatus Status = MoveStatus::Normal;
-		char disambiguationFile = '\0';
+		Move(Tile source, Tile target, uint8_t flags = 0, uint8_t promotion = 0, uint8_t pieceType = 0, uint8_t capturedPiece = 0);
 
-		Move() = default;
-		Move(Tile source, Tile target, PieceType promotion = PieceType::None)
-			: Source(source), Target(target), Promotion(promotion) {}
+		// Getters
+		Tile GetSource() const { return Tile((Data >> 26) & 0b111111); }
+		Tile GetTarget() const { return Tile((Data >> 20) & 0b111111); }
+		uint8_t GetFlags() const { return (Data >> 16) & 0b1111; }
+		uint8_t GetPromotion() const { return (Data >> 12) & 0b1111; }
+		uint8_t GetPieceType() const { return (Data >> 8) & 0b1111; }
+		uint8_t GetCapturedPiece() const { return (Data >> 4) & 0b1111; }
 
-		static Move FromString(const std::string& moveStr)
-		{
-			if (moveStr.length() != 4) {
-				throw std::invalid_argument("Invalid move format (expected format: e2e4)");
-			}
+		// Flags
+		bool IsCapture() const { return GetFlags() & captureFlag; }
+		bool IsEnPassant() const { return GetFlags() & enPassantFlag; }
+		bool IsCastling() const { return GetFlags() & castlingFlag; }
+		bool IsPromotion() const { return GetFlags() & promotionFlag; }
 
-			Tile source = Tile::FromAlgebraic(moveStr.substr(0, 2));
-			Tile target = Tile::FromAlgebraic(moveStr.substr(2, 2));
+		// Flags definition
+		constexpr static uint8_t captureFlag = 0b0001;
+		constexpr static uint8_t enPassantFlag = 0b0010;
+		constexpr static uint8_t castlingFlag = 0b0100;
+		constexpr static uint8_t promotionFlag = 0b1000;
 
-			return Move(source, target);
-		}
+		// Metadata sizes
+		constexpr static uint8_t sourceBits = 6;
+		constexpr static uint8_t targetBits = 6;
+		constexpr static uint8_t flagsBits = 4;
+		constexpr static uint8_t promotionBits = 4;
+		constexpr static uint8_t pieceTypeBits = 4;
+		constexpr static uint8_t capturedPieceBits = 4;
+		constexpr static uint8_t reservedBits = 4;
 
-		operator std::string() const
-		{
-			std::string moveStr = std::string(1, Source.File + 'a') + std::to_string(8 - Source.Rank)
-				+ std::string(1, Target.File + 'a') + std::to_string(8 - Target.Rank);
-			return moveStr;
-		}
+		// Conversion methods
+		std::string ToAlgebraic() const;
+		static Move FromAlgebraic(const std::string& algebraic);
 	};
 
 }

@@ -87,11 +87,11 @@ int main()
 
 	bool playerTurn = true;
 
-	while (!engine.GetGame()->IsGameOver()) {
-		// Clear console and display the board
-		ClearConsole();
-		std::cout << engine.GetGame()->GetBoard() << std::endl;
+	// Print the initial board
+	ClearConsole();
+	std::cout << engine.GetGame()->GetBoard() << std::endl;
 
+	while (!engine.GetGame()->IsGameOver()) {
 		if (playerTurn) {
 			// Player's move
 			std::string inputMove;
@@ -100,26 +100,35 @@ int main()
 
 			// Parse input and make the move
 			try {
-				Move playerMove = Move::FromString(inputMove);
+				Move playerMove = Move::FromAlgebraic(inputMove);
 				engine.MakeMove(playerMove);
+
+				// Switch to bot's turn
+				playerTurn = false;
 			}
 			catch (const std::exception& e) {
-				std::cout << "Invalid move: " << e.what() << "\n";
+				std::cout << "Invalid move: " << e.what() << '\n';
 				std::cin.get();  // Wait for Enter
 				continue;        // Retry move
 			}
 		}
 		else {
 			// Bot's move
-			std::cout << "Bot is thinking..." << std::endl;
-			Move bestMove = engine.FindBestMove(5);  // Adjust depth as needed
+			std::cout << "Bot is thinking...\n";
+			Move bestMove = engine.FindBestMove(6);  // Adjust depth as needed
 			engine.MakeMove(bestMove);
 
-			std::cout << "Bot played: " << (std::string)bestMove << std::endl;
-		}
+			// Clear console and display the board
+			ClearConsole();
+			std::cout << engine.GetGame()->GetBoard() << std::endl;
 
-		// Switch turns
-		playerTurn = !playerTurn;
+			// Display the move played by the bot
+			std::cout << "Bot played: " << bestMove.ToAlgebraic() << '\n';
+			std::cout << "Board evaluation: " << engine.Evaluate() << '\n';
+
+			// Switch to player's turn
+			playerTurn = true;
+		}
 	}
 
 	// Game over - print result
@@ -127,10 +136,10 @@ int main()
 	std::cout << "Game over!\n";
 	std::cout << engine.GetGame()->GetBoard() << std::endl;
 
-	if (engine.GetGame()->IsCheckmate()) {
+	if (engine.GetGame()->GetBoard().IsCheckmate()) {
 		std::cout << (playerTurn ? "Bot wins!" : "You win!") << std::endl;
 	}
-	else if (engine.GetGame()->IsStalemate()) {
+	else if (engine.GetGame()->GetBoard().IsStalemate()) {
 		std::cout << "Stalemate!" << std::endl;
 	}
 	else {

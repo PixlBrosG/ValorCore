@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Valor/Chess/Game.h"
+#include "Valor/Chess/Board.h"
 
 namespace Valor {
 
@@ -9,7 +9,7 @@ namespace Valor {
 	public:
 		virtual ~Evaluator() = default;
 
-		virtual float Evaluate(const Game& game) = 0;
+		virtual float Evaluate(const Board& board) = 0;
 	};
 
 	class PieceValueEvaluator : public Evaluator
@@ -17,7 +17,7 @@ namespace Valor {
 	public:
 		virtual ~PieceValueEvaluator() = default;
 
-		virtual float Evaluate(const Game& game) override;
+		virtual float Evaluate(const Board& board) override;
 	};
 
 }

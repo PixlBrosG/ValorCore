@@ -1,31 +1,32 @@
 #pragma once
 
 #include <ostream>
+#include <string>
 
 namespace Valor {
 
 	struct Tile
 	{
-		int Rank, File;
-		Tile() = default;
-		Tile(int rank, int file)
-			: Rank(rank), File(file) {
-		}
+		uint8_t TileIndex;
 
-		static Tile FromAlgebraic(const std::string& notation) {
-			if (notation.length() != 2 || notation[0] < 'a' || notation[0] > 'h' || notation[1] < '1' || notation[1] > '8') {
-				throw std::invalid_argument("Invalid tile notation");
-			}
+		Tile()
+			: TileIndex(255) {}
+		Tile(uint8_t tileIndex)
+			: TileIndex(tileIndex) {}
+		Tile(uint8_t rank, uint8_t file)
+			: TileIndex(rank * 8 + file) {}
 
-			int file = notation[0] - 'a';  // 'a' -> 0, ..., 'h' -> 7
-			int rank = notation[1] - '1';  // '1' -> 0, ..., '8' -> 7
-			return Tile(rank, file);
-		}
+		uint8_t Rank() const { return TileIndex / 8; }
+		uint8_t File() const { return TileIndex % 8; }
 
-		bool operator==(const Tile& other) const
-		{
-			return Rank == other.Rank && File == other.File;
-		}
+		std::string ToAlgebraic() const;
+		static Tile FromAlgebraic(const std::string& algebraic);
+
+		bool operator==(const Tile& other) const { return TileIndex == other.TileIndex; }
+
+		operator uint8_t() const { return TileIndex; }
+
+		static const Tile None;
 	};
 
 	namespace Tiles {
@@ -43,9 +44,11 @@ namespace Valor {
 }
 
 namespace std {
+
 	inline ostream& operator<<(ostream& os, const Valor::Tile& tile)
 	{
-		os << static_cast<char>('A' + tile.File) << tile.Rank + 1;
+		os << static_cast<char>('A' + tile.File()) << tile.Rank() + 1;
 		return os;
 	}
+
 }
