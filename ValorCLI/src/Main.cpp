@@ -6,12 +6,14 @@
 
 #ifdef _WIN32
 #include <windows.h>
-void ClearConsole() {
+void ClearConsole()
+{
 	system("cls");
 }
 #else
 #include <cstdlib>
-void ClearConsole() {
+void ClearConsole()
+{
 	system("clear");
 }
 #endif
@@ -37,12 +39,13 @@ int main()
 	std::cin.get();
 
 	while (!engine.GetGame()->IsGameOver()) {
+		// Find and play the best move
+		Move bestMove = engine.FindBestMove(6);
+		bestMove = engine.GetGame()->GetBoard().ParseMove(bestMove.GetSource(), bestMove.GetTarget());
+		engine.MakeMove(bestMove);
+
 		// Clear console
 		ClearConsole();
-
-		// Find and play the best move
-		Move bestMove = engine.FindBestMove(5);
-		engine.MakeMove(bestMove);
 
 		// Display the updated board state
 		std::cout << "Board:\n" << std::endl;
@@ -53,7 +56,7 @@ int main()
 		std::cout << "Score: " << score << std::endl;
 
 		// Display the move played
-		std::cout << "\nMove played: " << bestMove.Source << " -> " << bestMove.Target << std::endl;
+		std::cout << "\nMove played: " << bestMove.ToAlgebraic() << std::endl;
 
 		// Wait for user input
 		std::cout << "Press Enter to continue...";
@@ -67,15 +70,15 @@ int main()
 	std::cout << engine.GetGame()->GetBoard() << std::endl;
 
 	std::cout << "Result: ";
-	if (engine.GetGame()->IsCheckmate())
-		std::cout << "Checkmate!" << (engine.GetGame()->GetTurn() == PieceColor::White ? " Black wins!" : " White wins!");
-	else if (engine.GetGame()->IsStalemate())
+	if (engine.GetGame()->GetBoard().IsCheckmate(!engine.GetGame()->GetBoard().IsWhiteTurn()))
+		std::cout << "Checkmate!" << (engine.GetGame()->GetBoard().IsWhiteTurn() ? " Black wins!" : " White wins!");
+	else if (engine.GetGame()->GetBoard().IsStalemate(!engine.GetGame()->GetBoard().IsWhiteTurn()))
 		std::cout << "Stalemate!";
 	else if (engine.GetGame()->IsDraw())
 	{
 		if (engine.GetGame()->IsThreefoldRepetition())
 			std::cout << "Draw by Threefold Repetition!";
-		else if (engine.GetGame()->IsFiftyMoveRule())
+		else if (engine.GetGame()->GetBoard().IsFiftyMoveRule())
 			std::cout << "Draw by Fifty Move Rule!";
 		else if (engine.GetGame()->IsInsufficientMaterial())
 			std::cout << "Draw by Insufficient Material!";
@@ -100,33 +103,33 @@ int main()
 			std::cout << "Your move (e.g., e2e4): ";
 			std::cin >> inputMove;
 
-			// Parse input and make the move
-			try {
-				Move playerMove = Move::FromAlgebraic(inputMove);
-				playerMove = engine.GetGame()->GetBoard().ParseMove(playerMove.GetSource(), playerMove.GetTarget());
-				if (!engine.GetGame()->GetBoard().IsLegalMove(playerMove))
-				{
-					std::cout << "Invalid move: " << inputMove << '\n';
-					std::cin.get();  // Wait for Enter
-					continue;        // Retry move
-				}
-				engine.MakeMove(playerMove);
-
-				// Switch to bot's turn
-				playerTurn = false;
-			}
-			catch (const std::exception& e) {
-				std::cout << "Invalid move: " << e.what() << '\n';
+			MoveInfo playerMove = Move::FromAlgebraic(inputMove);
+			playerMove = engine.GetGame()->GetBoard().ParseMove(playerMove.Source, playerMove.Target);
+			if (!engine.GetGame()->GetBoard().IsLegalMove(playerMove))
+			{
+				std::cout << "Invalid move: " << inputMove << '\n';
 				std::cin.get();  // Wait for Enter
 				continue;        // Retry move
 			}
+			engine.MakeMove(playerMove);
+
+			// Clear console and display the board
+			ClearConsole();
+			std::cout << engine.GetGame()->GetBoard() << std::endl;
+
+			// Display the move played by the bot
+			std::cout << "You played: " << playerMove.ToAlgebraic() << '\n';
+			std::cout << "Board evaluation: " << engine.Evaluate() << '\n';
+
+			// Switch to bot's turn
+			playerTurn = false;
 		}
 		else
 		{
 			// Bot's move
 			std::cout << "Bot is thinking...\n";
-			Move bestMove = engine.FindBestMove(6);  // Adjust depth as needed
-			bestMove = engine.GetGame()->GetBoard().ParseMove(bestMove.GetSource(), bestMove.GetTarget());
+			MoveInfo bestMove = engine.FindBestMove(6);  // Adjust depth as needed
+			bestMove = engine.GetGame()->GetBoard().ParseMove(bestMove.Source, bestMove.Target);
 			engine.MakeMove(bestMove);
 
 			// Clear console and display the board
@@ -147,10 +150,10 @@ int main()
 	std::cout << "Game over!\n";
 	std::cout << engine.GetGame()->GetBoard() << std::endl;
 
-	if (engine.GetGame()->GetBoard().IsCheckmate(SWAP_COLOR(engine.GetGame()->GetBoard().GetTurn()))) {
+	if (engine.GetGame()->GetBoard().IsCheckmate(engine.GetGame()->GetBoard().IsWhiteTurn())) {
 		std::cout << (playerTurn ? "Bot wins!" : "You win!") << std::endl;
 	}
-	else if (engine.GetGame()->GetBoard().IsStalemate(SWAP_COLOR(engine.GetGame()->GetBoard().GetTurn()))) {
+	else if (engine.GetGame()->GetBoard().IsStalemate(engine.GetGame()->GetBoard().IsWhiteTurn())) {
 		std::cout << "Stalemate!" << std::endl;
 	}
 	else {

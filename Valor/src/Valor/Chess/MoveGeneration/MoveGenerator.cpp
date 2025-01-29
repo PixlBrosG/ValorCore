@@ -63,7 +63,6 @@ namespace Valor {
 		uint64_t pawns = board.Pawns(isWhiteTurn);
 		uint64_t enPassant = 1ull << (board.GetEnPassantFile() + (isWhiteTurn ? 8 * 4 : 8 * 3));
 
-
 		uint64_t leftCapture = isWhiteTurn
 			? (pawns << 7) & enPassant & ~Board::FileH
 			: (pawns >> 7) & enPassant & ~Board::FileA;
@@ -138,13 +137,13 @@ namespace Valor {
 		uint64_t moves = 0;
 		if (isWhiteTurn)
 		{
-			if (board.GetCastlingRights(isWhiteTurn, true)  && !(board.Occupied() & 0x0000000000000060)) moves |= (1 << 62); // White kingside
-			if (board.GetCastlingRights(isWhiteTurn, false) && !(board.Occupied() & 0x000000000000000E)) moves |= (1 << 58); // White queenside
+			if (board.GetCastlingRights(isWhiteTurn, true)  && !(board.Occupied() & 0x0000000000000060)) moves |= (1ull << 62); // White kingside
+			if (board.GetCastlingRights(isWhiteTurn, false) && !(board.Occupied() & 0x000000000000000E)) moves |= (1ull << 58); // White queenside
 		}
 		else
 		{
-			if (board.GetCastlingRights(isWhiteTurn, true)  && !(board.Occupied() & 0x6000000000000000)) moves |= (1 << 6);  // Black kingside
-			if (board.GetCastlingRights(isWhiteTurn, false) && !(board.Occupied() & 0x0E00000000000000)) moves |= (1 << 2);  // Black queenside
+			if (board.GetCastlingRights(isWhiteTurn, true)  && !(board.Occupied() & 0x6000000000000000)) moves |= (1ull << 6);  // Black kingside
+			if (board.GetCastlingRights(isWhiteTurn, false) && !(board.Occupied() & 0x0E00000000000000)) moves |= (1ull << 2);  // Black queenside
 		}
 
 		return moves;
@@ -219,20 +218,20 @@ namespace Valor {
 
 					// Check capture
 					if (board.OpponentPieces() & (1ULL << targetSquare))
-						flags |= Move::captureFlag;
+						flags |= MoveFlags::Capture;
 
 					// Check promotion (default to queen)
 					if (target.GetRank() == (isWhiteTurn ? 7 : 0))
 					{
-						flags |= Move::promotionFlag;
+						flags |= MoveFlags::Promotion;
 						promotion = PieceType::Queen;
 					}
 
 					// Check en passant
 					if (target.GetFile() == board.GetEnPassantFile())
-						flags |= Move::enPassantFlag;
+						flags |= MoveFlags::EnPassant;
 
-					moves.emplace_back(source, target, flags, promotion, PieceType::Pawn);
+					moves.emplace_back(source, target, PieceType::Pawn, flags, promotion);
 				}
 				targets &= targets - 1;
 			}
@@ -260,9 +259,9 @@ namespace Valor {
 					uint8_t flags = 0;
 
 					if (board.OpponentPieces() & (1ULL << targetSquare))
-						flags |= Move::captureFlag;
+						flags |= MoveFlags::Capture;
 
-					moves.emplace_back(source, target, flags, PieceType::None, type);
+					moves.emplace_back(source, target, type, flags);
 				}
 				targets &= targets - 1;
 			}

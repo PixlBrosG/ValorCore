@@ -29,18 +29,20 @@ namespace Valor {
 		m_Kings = 0x1000000000000010ull;
 	}
 
-	Move Board::ParseMove(Tile source, Tile target) const
+	MoveInfo Board::ParseMove(Tile source, Tile target) const
 	{
-		uint16_t flags = 0;
-		PieceType promotion = PieceType::None;
-		PieceType pieceType = GetPiece(source).Type;
-		PieceType capturedPiece = PieceType::None;
+		MoveInfo move;
+		move.Source = source;
+		move.Target = target;
+
+		Piece piece = GetPiece(source);
+		move.Piece = piece.Type;
 
 		// Determine if the move is a capture
-		if (IsOccupied(target) && (GetPiece(target).Color != PieceColor::White ? m_IsWhiteTurn : !m_IsWhiteTurn))
+		if (IsOccupied(target) && (piece.Color != PieceColor::White ? m_IsWhiteTurn : !m_IsWhiteTurn))
 		{
-			flags |= Move::captureFlag;
-			capturedPiece = GetPiece(target).Type;
+			move.Flags |= MoveFlags::Capture;
+			move.CapturedPiece = piece.Type;
 		}
 		else if (IsOccupied(target))
 		{
@@ -48,101 +50,96 @@ namespace Valor {
 		}
 
 		// Handle pawn-specific metadata
-		if (pieceType == PieceType::Pawn) {
+		if (piece.Type == PieceType::Pawn) {
 			if (target.GetFile() == m_EnPassantFile) {
-				flags |= Move::enPassantFlag;
-				capturedPiece = PieceType::Pawn;
+				move.Flags |= MoveFlags::EnPassant;
+				move.CapturedPiece = PieceType::Pawn;
 			}
 			// Handle promotion (promotion rank: 7 for white, 0 for black)
 			if (target.GetRank() == (m_IsWhiteTurn ? 7 : 0)) {
-				flags |= Move::promotionFlag;
-				promotion = PieceType::Queen; // Default to queen; adjust if needed.
+				move.Flags |= MoveFlags::Promotion;
+				move.Promotion = PieceType::Queen; // NOTE: Default to queen promotion
 			}
 		}
 
 		// Handle castling
-		if (pieceType == PieceType::King) {
-			if (std::abs(target.GetFile() - source.GetFile()) == 2) {
-				flags |= Move::castlingFlag;
-			}
+		if (piece.Type == PieceType::King)
+		{
+			if (std::abs(target.GetFile() - source.GetFile()) == 2)
+				move.Flags |= MoveFlags::Castling;
 		}
 
 		// Disambiguity (rank/file)
 		uint8_t disambiguityRank = 0;
 		uint8_t disambiguityFile = 0;
-		if (IsAmbiguousMove(source, target, pieceType)) {
-			ResolveDisambiguity(source, target, pieceType, disambiguityRank, disambiguityFile);
-		}
+		if (IsAmbiguousMove(source, target, piece.Type))
+			ResolveDisambiguity(source, target, piece.Type, disambiguityRank, disambiguityFile);
 
 		// Simulate the move on a dummy board to check for legality
 		Board simulatedBoard = *this; // Copy the current board
-		Move move(source, target, flags, promotion, pieceType, capturedPiece, disambiguityRank, disambiguityFile);
 		simulatedBoard.ApplyMove(move);
 
 		// Check if the move causes check or checkmate
 		if (simulatedBoard.IsCheck(simulatedBoard.IsWhiteTurn())) {
-			flags |= Move::checkFlag;
-			if (simulatedBoard.IsCheckmate()) {
-				flags |= Move::checkmateFlag;
-			}
+			move.Flags |= MoveFlags::Check;
+			if (simulatedBoard.IsCheckmate(simulatedBoard.IsWhiteTurn()))
+				move.Flags |= MoveFlags::Checkmate;
 		}
 
-		return Move(source, target, flags, promotion, pieceType, capturedPiece, disambiguityRank, disambiguityFile);
+		return move;
 	}
 
 	void Board::ApplyMove(const Move& move)
 	{
-		Tile source = move.GetSource();
-		Tile target = move.GetTarget();
+		uint64_t sourceBit = 1ULL << move.Source;
+		uint64_t targetBit = 1ULL << move.Target;
 
-		uint64_t sourceBit = 1ULL << source;
-		uint64_t targetBit = 1ULL << target;
+		Piece piece = GetPiece(move.Source);
 
 		// Update castling rights
-		UpdateCastlingRights(source, target);
-		m_HalfmoveCounter = move.IsCapture() || GetPiece(source).Type == PieceType::Pawn ? 0 : m_HalfmoveCounter + 1;
+		UpdateCastlingRights(move.Source, move.Target);
+		m_HalfmoveCounter = move.IsCapture() || piece.Type == PieceType::Pawn ? 0 : m_HalfmoveCounter + 1;
 
 		// Move the piece
-		Piece piece = GetPiece(source);
-		RemovePiece(source);
-		RemovePiece(target);
-		PlacePiece(target, piece.Color, piece.Type);
+		RemovePiece(move.Source);
+		RemovePiece(move.Target); // NOTE: This only matters if the move is a capture
+		PlacePiece(move.Target, piece.Color, piece.Type);
 
 		// Handle special moves
 		if (move.IsEnPassant())
 		{
-			uint8_t enPassantRank = target.GetRank() + (m_IsWhiteTurn ? -1 : 1);
-			Tile enPassantTarget(enPassantRank, target.GetFile());
+			uint8_t enPassantRank = move.Target.GetRank() + (m_IsWhiteTurn ? -1 : 1);
+			Tile enPassantTarget(enPassantRank, move.Target.GetFile());
 			RemovePiece(enPassantTarget);
 		}
 		else if (move.IsCastling())
 		{
 			Tile rookSource, rookTarget;
-			if (target.GetFile() == 2) // Queen-side castling
+			if (move.Target.GetFile() == 2) // Queen-side castling
 			{
-				rookSource = Tile(target.GetRank(), 0);
-				rookTarget = Tile(target.GetRank(), 3);
+				rookSource = Tile(move.Target.GetRank(), 0);
+				rookTarget = Tile(move.Target.GetRank(), 3);
 			}
 			else // King-side castling
 			{
-				rookSource = Tile(target.GetRank(), 7);
-				rookTarget = Tile(target.GetRank(), 5);
+				rookSource = Tile(move.Target.GetRank(), 7);
+				rookTarget = Tile(move.Target.GetRank(), 5);
 			}
 			Piece rook = GetPiece(rookSource);
 			RemovePiece(rookSource);
-			RemovePiece(rookTarget);
+			RemovePiece(rookTarget); // NOTE: This is unnecessary, but it's done for safety
 			PlacePiece(rookTarget, rook.Color, rook.Type);
 		}
 		// Handle promotion
 		if (move.IsPromotion())
 		{
-			Piece promotedPiece = Piece(static_cast<PieceType>(move.GetPromotion()), piece.Color);
-			RemovePiece(target);
-			PlacePiece(target, promotedPiece.Color, promotedPiece.Type);
+			Piece promotedPiece = Piece(move.Promotion, piece.Color);
+			RemovePiece(move.Target);
+			PlacePiece(move.Target, promotedPiece.Color, promotedPiece.Type);
 		}
 		// Update en passant target square
-		if (piece.Type == PieceType::Pawn && std::abs(source.GetRank() - target.GetRank()) == 2)
-			m_EnPassantFile = target.GetFile();
+		if (piece.Type == PieceType::Pawn && std::abs(move.Source.GetRank() - move.Target.GetRank()) == 2)
+			m_EnPassantFile = move.Target.GetFile();
 		else
 			m_EnPassantFile = 0xff;
 		// Toggle turn
@@ -154,7 +151,7 @@ namespace Valor {
 		std::vector<Move> moves = MoveGenerator::GenerateLegalMoves(*this, m_IsWhiteTurn);
 		for (const Move& legalMove : moves)
 		{
-			if (move.GetSource() == legalMove.GetSource() && move.GetTarget() == legalMove.GetTarget())
+			if (move.Source == legalMove.Source && move.Target == legalMove.Target)
 				return true;
 		}
 		return false;
@@ -258,6 +255,21 @@ namespace Valor {
 			case PieceType::Rook:   return Rooks(isWhiteturn);
 			case PieceType::Queen:  return Queens(isWhiteturn);
 			case PieceType::King:   return Kings(isWhiteturn);
+			default: return 0;
+		}
+	}
+
+	uint64_t Board::GetPieceBitboard(PieceType type) const
+	{
+		switch (type)
+		{
+			case PieceType::Pawn:   return Pawns();
+			case PieceType::Knight: return Knights();
+			case PieceType::Bishop: return Bishops();
+			case PieceType::Rook:   return Rooks();
+			case PieceType::Queen:  return Queens();
+			case PieceType::King:   return Kings();
+			default: return 0;
 		}
 	}
 
@@ -332,14 +344,9 @@ namespace Valor {
 		return false;
 	}
 
-	bool Board::IsCheck(bool isWhite) const
+	std::vector<Move> Board::GenerateLegalMoves(bool isWhiteTurn) const
 	{
-		return IsSquareAttacked(KingSquare(!isWhite), isWhite);
-	}
-
-	std::vector<Move> Board::GenerateLegalMoves() const
-	{
-		return MoveGenerator::GenerateLegalMoves(*this, m_IsWhiteTurn);
+		return MoveGenerator::GenerateLegalMoves(*this, isWhiteTurn);
 	}
 
 }

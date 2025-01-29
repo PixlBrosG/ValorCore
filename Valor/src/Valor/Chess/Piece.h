@@ -2,22 +2,22 @@
 
 namespace Valor {
 
-	enum class PieceType
+	enum class PieceType : unsigned char
 	{
-		None = 0,
-		Pawn,
-		Knight,
-		Bishop,
-		Rook,
-		Queen,
-		King
+		None = 0xFF,
+		Pawn = 0,
+		Knight = 1,
+		Bishop = 2,
+		Rook = 3,
+		Queen = 4,
+		King = 5
 	};
 
-	enum class PieceColor
+	enum class PieceColor : unsigned char
 	{
-		None = 0,
-		White,
-		Black
+		None = 0xFF,
+		White = 0,
+		Black = 1
 	};
 
 	struct Piece
@@ -29,14 +29,56 @@ namespace Valor {
 			: Type(type), Color(color) {
 		}
 
-		char ToChar() const { return PieceTypeToChar(Type); }
-
+		constexpr char ToChar() const { return PieceTypeToChar(Type); }
+		
 		explicit operator char() const { return ToChar(); }
 
-		static char PieceTypeToChar(PieceType type);
+		constexpr static char PieceTypeToChar(PieceType type);
+
+		constexpr static PieceColor GetOppositeColor(PieceColor color);
+
+		constexpr static bool IsSlidingPiece(PieceType type);
+		constexpr static bool IsMinorPiece(PieceType type);
+		constexpr static bool IsMajorPiece(PieceType type);
 	};
 
-#define SWAP_COLOR(color) (color == PieceColor::White ? PieceColor::Black : PieceColor::White)
-#define BOOL_TO_COLOR(b) (b ? PieceColor::White : PieceColor::Black)
+	constexpr char Piece::PieceTypeToChar(PieceType type)
+	{
+		switch (type)
+		{
+		case PieceType::Pawn: return 'P';
+		case PieceType::Knight: return 'N';
+		case PieceType::Bishop: return 'B';
+		case PieceType::Rook: return 'R';
+		case PieceType::Queen: return 'Q';
+		case PieceType::King: return 'K';
+		default: return ' ';
+		}
+	}
+
+	constexpr PieceColor Piece::GetOppositeColor(PieceColor color)
+	{
+		switch (color)
+		{
+		case PieceColor::White: return PieceColor::Black;
+		case PieceColor::Black: return PieceColor::White;
+		default: return PieceColor::None;
+		}
+	}
+
+	constexpr bool Piece::IsSlidingPiece(PieceType type)
+	{
+		return type == PieceType::Bishop || type == PieceType::Rook || type == PieceType::Queen;
+	}
+
+	constexpr bool Piece::IsMinorPiece(PieceType type)
+	{
+		return type == PieceType::Knight || type == PieceType::Bishop;
+	}
+
+	constexpr bool Piece::IsMajorPiece(PieceType type)
+	{
+		return type == PieceType::Rook || type == PieceType::Queen;
+	}
 
 }

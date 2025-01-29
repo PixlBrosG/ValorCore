@@ -23,9 +23,8 @@ namespace Valor {
 
 	void Game::MakeMove(const Move& move)
 	{
-		m_MoveHistory.push_back(move);
-
-		m_BoardHistory.push_back(m_Board);
+		m_MoveHistory.emplace_back(move);
+		m_BoardHistory.emplace_back(m_Board);
 
 		m_Board.ApplyMove(move);
 

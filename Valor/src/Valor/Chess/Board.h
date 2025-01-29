@@ -21,7 +21,7 @@ namespace Valor {
 
 		void Reset();
 
-		Move ParseMove(Tile source, Tile target) const;
+		MoveInfo ParseMove(Tile source, Tile target) const;
 		void ApplyMove(const Move& move);
 		bool IsLegalMove(const Move& move) const;
 
@@ -49,6 +49,7 @@ namespace Valor {
 		bool IsOccupied(Tile tile) const { return Occupied() & (1ULL << tile); }
 
 		uint64_t GetPieceBitboard(bool isWhite, PieceType type) const;
+		uint64_t GetPieceBitboard(PieceType type) const;
 
 		uint64_t AllPieces(bool isWhite) const { return isWhite ? m_AllWhite : m_AllBlack; }
 		uint64_t WhitePieces() const { return m_AllWhite; }
@@ -75,14 +76,15 @@ namespace Valor {
 
 		bool IsSquareAttacked(int square, bool isWhite) const;
 
-		bool IsCheck(bool isWhite) const;
-		bool IsCheckmate(bool isWhite = true) const { return IsCheck(isWhite) && GenerateLegalMoves().empty(); }
-		bool IsStalemate(bool isWhite = true) const { return !IsCheck(isWhite) && GenerateLegalMoves().empty(); }
+		bool IsCheck(bool isWhiteAttacker) const { return IsSquareAttacked(KingSquare(!isWhiteAttacker), isWhiteAttacker); }
+		bool IsCheckmate(bool isWhiteAttacker) const { return  IsCheck(isWhiteAttacker) && GenerateLegalMoves(!isWhiteAttacker).empty(); }
+		bool IsStalemate(bool isWhiteAttacker) const { return !IsCheck(isWhiteAttacker) && GenerateLegalMoves(!isWhiteAttacker).empty(); }
 	public:
 		constexpr static uint64_t FileA = 0x0101010101010101ull;
 		constexpr static uint64_t FileH = 0x8080808080808080ull;
 	private:
-		std::vector<Move> GenerateLegalMoves() const;
+		std::vector<Move> GenerateLegalMoves(bool isWhiteTurn) const;
+		std::vector<Move> GenerateLegalMoves() const { return GenerateLegalMoves(m_IsWhiteTurn); }
 	private:
 		uint64_t m_AllWhite, m_AllBlack;
 		uint64_t m_Pawns, m_Knights, m_Bishops, m_Rooks, m_Queens, m_Kings;
@@ -125,7 +127,7 @@ namespace std {
 
 				// Print the tile with the piece
 				os << bgColor << pieceColor;
-				os << ' ' << piece.ToChar() << ' ';  // Piece character centered
+				os << ' ' << (char)piece << ' ';  // Piece character centered
 			}
 
 			os << "\033[1;40m\033[1;37m" << rankSeparator << (rank + 1) << "\033[0m" << std::endl;  // Rank number again
