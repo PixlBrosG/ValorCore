@@ -46,7 +46,7 @@ namespace Valor {
 		// Metadata sizes
 		constexpr static uint8_t sourceBits = 6;
 		constexpr static uint8_t targetBits = 6;
-		constexpr static uint8_t flagsBits = 6; // Now includes check and checkmate
+		constexpr static uint8_t flagsBits = 6;
 		constexpr static uint8_t promotionBits = 4;
 		constexpr static uint8_t pieceTypeBits = 4;
 		constexpr static uint8_t capturedPieceBits = 4;

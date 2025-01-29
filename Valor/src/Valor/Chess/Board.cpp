@@ -7,7 +7,7 @@
 namespace Valor {
 
 	Board::Board()
-		: m_Turn(PieceColor::White), m_EnPassantTarget(Tile::None)
+		: m_Turn(PieceColor::White), m_EnPassantFile(0xff), m_HalfmoveCounter(0)
 	{
 		Reset();
 	}
@@ -16,7 +16,7 @@ namespace Valor {
 	{
 		m_Turn = PieceColor::White;
 		m_HalfmoveCounter = 0;
-		m_EnPassantTarget = Tile::None;
+		m_EnPassantFile = 0xff;
 
 		m_AllWhite = 0x000000000000FFFFull;
 		m_AllBlack = 0xFFFF000000000000ull;
@@ -27,43 +27,6 @@ namespace Valor {
 		m_Rooks = 0x8100000000000081ull;
 		m_Queens = 0x0800000000000008ull;
 		m_Kings = 0x1000000000000010ull;
-	}
-
-	Move Board::BasicParseMove(Tile source, Tile target) const
-	{
-		// Only checks for legality, does not handle ambiguity, check, checkmate, etc.
-		uint16_t flags = 0;
-		PieceType promotion = PieceType::None;
-		PieceType pieceType = GetPiece(source).Type;
-		PieceType capturedPiece = PieceType::None;
-
-		// Determine if the move is a capture
-		if (IsOccupied(target) && GetPiece(target).Color != GetTurn()) {
-			flags |= Move::captureFlag;
-			capturedPiece = GetPiece(target).Type;
-		}
-
-		// Handle pawn-specific metadata
-		if (pieceType == PieceType::Pawn) {
-			if (target == m_EnPassantTarget) {
-				flags |= Move::enPassantFlag;
-				capturedPiece = PieceType::Pawn;
-			}
-			// Handle promotion (promotion rank: 7 for white, 0 for black)
-			if (target.GetRank() == (GetTurn() == PieceColor::White ? 7 : 0)) {
-				flags |= Move::promotionFlag;
-				promotion = PieceType::Queen; // Default to queen; adjust if needed.
-			}
-		}
-
-		// Handle castling
-		if (pieceType == PieceType::King)
-		{
-			if (std::abs(target.GetFile() - source.GetFile()) == 2)
-				flags |= Move::castlingFlag;
-		}
-
-		return Move(source, target, flags, promotion, pieceType, capturedPiece);
 	}
 
 	Move Board::ParseMove(Tile source, Tile target) const
@@ -81,7 +44,7 @@ namespace Valor {
 
 		// Handle pawn-specific metadata
 		if (pieceType == PieceType::Pawn) {
-			if (target == m_EnPassantTarget) {
+			if (target.GetFile() == m_EnPassantFile) {
 				flags |= Move::enPassantFlag;
 				capturedPiece = PieceType::Pawn;
 			}
@@ -173,9 +136,9 @@ namespace Valor {
 		}
 		// Update en passant target square
 		if (piece.Type == PieceType::Pawn && std::abs(source.GetRank() - target.GetRank()) == 2)
-			m_EnPassantTarget = GetTurn() == PieceColor::White ? Tile(target.GetRank() - 1, target.GetFile()) : Tile(target.GetRank() + 1, target.GetFile());
+			m_EnPassantFile = GetTurn() == PieceColor::White ? target.GetFile() - 1 : target.GetFile() + 1;
 		else
-			m_EnPassantTarget = Tile::None;
+			m_EnPassantFile = 0xff;
 		// Toggle turn
 		ToggleTurn();
 	}
@@ -262,20 +225,21 @@ namespace Valor {
 
 	void Board::UpdateCastlingRights(Tile source, Tile target)
 	{
-		if (source == Tile(0, 4) || source == Tile(7, 4)) { // King moves
-			m_CastlingRights[static_cast<size_t>(GetTurn()) - 1][0] = false; // Queen-side
-			m_CastlingRights[static_cast<size_t>(GetTurn()) - 1][1] = false; // King-side
+		if (source == Tiles::E1 || source == Tiles::E8)
+		{
+			m_CastlingRights[m_Turn == PieceColor::White ? 0 : 2] = false; // Queen-side
+			m_CastlingRights[m_Turn == PieceColor::White ? 1 : 3] = false; // King-side
 		}
 
-		else if (source == Tile(0, 0) || target == Tile(0, 0)) // Rook moves (white queen-side)
-			m_CastlingRights[static_cast<size_t>(PieceColor::White) - 1][0] = false;
-		else if (source == Tile(0, 7) || target == Tile(0, 7)) // Rook moves (white king-side)
-			m_CastlingRights[static_cast<size_t>(PieceColor::White) - 1][1] = false;
+		else if (source == Tiles::A1 || target == Tiles::A1) // Rook moves (white queen-side)
+			m_CastlingRights[0] = false;
+		else if (source == Tiles::H1 || target == Tiles::H1) // Rook moves (white king-side)
+			m_CastlingRights[1] = false;
 
-		else if (source == Tile(7, 0) || target == Tile(7, 0)) // Rook moves (black queen-side)
-			m_CastlingRights[static_cast<size_t>(PieceColor::Black) - 1][0] = false;
-		else if (source == Tile(7, 7) || target == Tile(7, 7)) // Rook moves (black king-side)
-			m_CastlingRights[static_cast<size_t>(PieceColor::Black) - 1][1] = false;
+		else if (source == Tiles::A8 || target == Tiles::A8) // Rook moves (black queen-side)
+			m_CastlingRights[3] = false;
+		else if (source == Tiles::H8 || target == Tiles::H8) // Rook moves (black king-side)
+			m_CastlingRights[4] = false;
 	}
 
 	uint64_t Board::GetPieceBitboard(PieceColor color, PieceType type) const

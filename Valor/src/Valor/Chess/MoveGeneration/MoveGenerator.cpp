@@ -61,13 +61,14 @@ namespace Valor {
 
 	uint64_t MoveGenerator::GenerateEnPassantMoveBitboard(const Board& board, PieceColor turn)
 	{
-		if (board.GetEnPassantTarget() == Tile::None)
+		if (board.GetEnPassantFile() == 0xff)
 			return 0;
 
 		bool isWhiteTurn = turn == PieceColor::White;
 
 		uint64_t pawns = board.Pawns(turn);
-		uint64_t enPassant = 1ull << board.GetEnPassantTarget();
+		uint64_t enPassant = 1ull << (board.GetEnPassantFile() + (isWhiteTurn ? 8 * 4 : 8 * 3));
+
 
 		uint64_t leftCapture = isWhiteTurn
 			? (pawns << 7) & enPassant & ~Board::FileH
@@ -237,10 +238,8 @@ namespace Valor {
 					}
 
 					// Check en passant
-					if (target == board.GetEnPassantTarget())
-					{
+					if (target.GetFile() == board.GetEnPassantFile())
 						flags |= Move::enPassantFlag;
-					}
 
 					moves.emplace_back(source, target, flags, promotion, PieceType::Pawn);
 				}
@@ -365,10 +364,10 @@ namespace Valor {
 				moves |= (1ULL << (square + 9));
 
 			// En Passant
-			Tile enPassantTarget = board.GetEnPassantTarget();
-			if (enPassantTarget != Tile::None)
+			uint8_t enPassantFile = board.GetEnPassantFile();
+			if (enPassantFile != 0xff)
 			{
-				int enPassantSquare = enPassantTarget;
+				uint8_t enPassantSquare = 1ull << enPassantFile << 8 * 4;
 				if ((square % 8 != 0 && enPassantSquare == square + 7) ||  // Capture left
 					(square % 8 != 7 && enPassantSquare == square + 9))    // Capture right
 				{
@@ -394,10 +393,10 @@ namespace Valor {
 				moves |= (1ULL << (square - 7));
 
 			// En Passant
-			Tile enPassantTarget = board.GetEnPassantTarget();
-			if (enPassantTarget != Tile::None)
+			uint8_t enPassantFile = board.GetEnPassantFile();
+			if (enPassantFile != 0xff)
 			{
-				int enPassantSquare = enPassantTarget;
+				int enPassantSquare = enPassantFile;
 				if ((square % 8 != 0 && enPassantSquare == square - 9) ||  // Capture left
 					(square % 8 != 7 && enPassantSquare == square - 7))    // Capture right
 				{

@@ -21,7 +21,6 @@ namespace Valor {
 
 		void Reset();
 
-		Move BasicParseMove(Tile source, Tile target) const;
 		Move ParseMove(Tile source, Tile target) const;
 		void ApplyMove(const Move& move);
 		bool IsLegalMove(const Move& move) const;
@@ -38,8 +37,8 @@ namespace Valor {
 		bool IsFiftyMoveRule() const { return m_HalfmoveCounter >= 100; }
 
 		PieceColor GetTurn() const { return m_Turn; }
-		Tile GetEnPassantTarget() const { return m_EnPassantTarget; }
-		bool GetCastlingRights(PieceColor color, bool kingSide) const { return m_CastlingRights[static_cast<size_t>(color) - 1][!kingSide]; }
+		uint8_t GetEnPassantFile() const { return m_EnPassantFile; }
+		bool GetCastlingRights(PieceColor color, bool kingSide) const { return m_CastlingRights[(size_t)(color == PieceColor::White ? 0 : 2) + kingSide]; }
 
 		uint64_t GetMoveMask(int square, PieceType type) const;
 
@@ -87,8 +86,8 @@ namespace Valor {
 		uint64_t m_Pawns, m_Knights, m_Bishops, m_Rooks, m_Queens, m_Kings;
 		
 		PieceColor m_Turn;
-		Tile m_EnPassantTarget;
-		std::array<std::array<bool, 2>, 2> m_CastlingRights;  // [white/black][king/queen]
+		uint8_t m_EnPassantFile;
+		std::array<bool, 4> m_CastlingRights;  // [white/black][king/queen]
 
 		uint8_t m_HalfmoveCounter;
 	};
