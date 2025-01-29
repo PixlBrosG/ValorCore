@@ -152,7 +152,7 @@ namespace Valor {
 	std::vector<Move> MoveGenerator::GeneratePseudoLegalMoves(const Board& board, bool isWhiteTurn)
 	{
 		std::vector<Move> moves;
-		moves.reserve(100);
+		moves.reserve(40);
 
 		// Pawn moves
 		uint64_t pawnMoves = GeneratePawnMoveBitboard(board, isWhiteTurn);
@@ -276,7 +276,7 @@ namespace Valor {
 		std::vector<Move> legalMoves;
 		legalMoves.reserve(moves.size());
 
-		for (const Move& move : moves)
+		for (Move move : moves)
 		{
 			Board tempBoard = board;
 			tempBoard.ApplyMove(move);

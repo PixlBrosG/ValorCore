@@ -25,7 +25,7 @@ namespace Valor::Engine {
 		void MakeMove(const Move& move) { m_Game->MakeMove(move); }
 		std::vector<Move> GenerateMoves() { return MoveGenerator::GenerateLegalMoves(m_Game->GetBoard(), m_Game->GetBoard().IsWhiteTurn()); }
 
-		Move FindBestMove(int maxDepth, bool useAlphaBeta = true);
+		Move FindBestMove(int maxDepth);
 
 		Game* GetGame() { return m_Game.get(); }
 		Evaluator* GetEvaluator() { return m_Evaluator.get(); }

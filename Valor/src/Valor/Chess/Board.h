@@ -22,8 +22,8 @@ namespace Valor {
 		void Reset();
 
 		MoveInfo ParseMove(Tile source, Tile target) const;
-		void ApplyMove(const Move& move);
-		bool IsLegalMove(const Move& move) const;
+		void ApplyMove(Move move);
+		bool IsLegalMove(Move move) const;
 
 		bool IsAmbiguousMove(Tile source, Tile target, PieceType pieceType) const;
 		void ResolveDisambiguity(Tile source, Tile target, PieceType pieceType, uint8_t& disambiguityRank, uint8_t& disambiguityFile) const;

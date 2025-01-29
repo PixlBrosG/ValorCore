@@ -3,9 +3,9 @@
 
 namespace Valor::Engine {
 
-	Move ValorEngine::FindBestMove(int maxDepth, bool useAlphaBeta)
+	Move ValorEngine::FindBestMove(int maxDepth)
 	{
-		Minimax minimax(useAlphaBeta);
+		Minimax minimax;
 		Game game = m_Game->CreateSnapshot();
 
 		return minimax.FindBestMove(game, maxDepth, m_Evaluator.get());

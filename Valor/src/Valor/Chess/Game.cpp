@@ -21,7 +21,7 @@ namespace Valor {
 		m_BoardHistory.clear();
 	}
 
-	void Game::MakeMove(const Move& move)
+	void Game::MakeMove(Move move)
 	{
 		m_MoveHistory.emplace_back(move);
 		m_BoardHistory.emplace_back(m_Board);

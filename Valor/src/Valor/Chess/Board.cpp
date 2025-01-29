@@ -89,7 +89,7 @@ namespace Valor {
 		return move;
 	}
 
-	void Board::ApplyMove(const Move& move)
+	void Board::ApplyMove(Move move)
 	{
 		uint64_t sourceBit = 1ULL << move.Source;
 		uint64_t targetBit = 1ULL << move.Target;
@@ -146,10 +146,10 @@ namespace Valor {
 		ToggleTurn();
 	}
 
-	bool Board::IsLegalMove(const Move& move) const
+	bool Board::IsLegalMove(Move move) const
 	{
 		std::vector<Move> moves = MoveGenerator::GenerateLegalMoves(*this, m_IsWhiteTurn);
-		for (const Move& legalMove : moves)
+		for (Move legalMove : moves)
 		{
 			if (move.Source == legalMove.Source && move.Target == legalMove.Target)
 				return true;

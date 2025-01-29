@@ -15,7 +15,7 @@ namespace Valor {
 
 		// Initialization and gameplay
 		void Init();
-		void MakeMove(const Move& move);
+		void MakeMove(Move move);
 		void UndoMove();
 
 		// Game state
