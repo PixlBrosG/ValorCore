@@ -31,14 +31,14 @@ namespace Valor {
 		void RemovePiece(Tile tile);
 		void PlacePiece(Tile tile, PieceColor color, PieceType type);
 
-		void ToggleTurn() { m_Turn = m_Turn == PieceColor::White ? PieceColor::Black : PieceColor::White; }
+		bool IsWhiteTurn() const { return m_IsWhiteTurn; }
+		void ToggleTurn() { m_IsWhiteTurn ^= 1; }
 
 		void UpdateCastlingRights(Tile source, Tile target);
 		bool IsFiftyMoveRule() const { return m_HalfmoveCounter >= 100; }
 
-		PieceColor GetTurn() const { return m_Turn; }
 		uint8_t GetEnPassantFile() const { return m_EnPassantFile; }
-		bool GetCastlingRights(PieceColor color, bool kingSide) const { return m_CastlingRights[(size_t)(color == PieceColor::White ? 0 : 2) + kingSide]; }
+		bool GetCastlingRights(bool isWhite, bool kingSide) const { return m_CastlingRights[(isWhite ? 0ull : 2ull) + kingSide]; }
 
 		uint64_t GetMoveMask(int square, PieceType type) const;
 
@@ -48,12 +48,14 @@ namespace Valor {
 		uint64_t Occupied() const { return m_AllWhite | m_AllBlack; }
 		bool IsOccupied(Tile tile) const { return Occupied() & (1ULL << tile); }
 
-		uint64_t GetPieceBitboard(PieceColor color, PieceType type) const;
+		uint64_t GetPieceBitboard(bool isWhite, PieceType type) const;
 
-		uint64_t AllPieces(PieceColor color) const { return color == PieceColor::White ? m_AllWhite : m_AllBlack; }
+		uint64_t AllPieces(bool isWhite) const { return isWhite ? m_AllWhite : m_AllBlack; }
+		uint64_t WhitePieces() const { return m_AllWhite; }
+		uint64_t BlackPieces() const { return m_AllBlack; }
 
-		uint64_t PlayerPieces() const { return m_Turn == PieceColor::White ? m_AllWhite : m_AllBlack; }
-		uint64_t OpponentPieces() const { return m_Turn == PieceColor::White ? m_AllBlack : m_AllWhite; }
+		uint64_t PlayerPieces() const { return m_IsWhiteTurn ? m_AllWhite : m_AllBlack; }
+		uint64_t OpponentPieces() const { return m_IsWhiteTurn ? m_AllBlack : m_AllWhite; }
 
 		uint64_t Pawns() const { return m_Pawns; }
 		uint64_t Knights() const { return m_Knights; }
@@ -62,20 +64,20 @@ namespace Valor {
 		uint64_t Queens() const { return m_Queens; }
 		uint64_t Kings() const { return m_Kings; }
 
-		uint64_t Pawns(PieceColor color) const { return m_Pawns & (color == PieceColor::White ? m_AllWhite : m_AllBlack); }
-		uint64_t Knights(PieceColor color) const { return m_Knights & (color == PieceColor::White ? m_AllWhite : m_AllBlack); }
-		uint64_t Bishops(PieceColor color) const { return m_Bishops & (color == PieceColor::White ? m_AllWhite : m_AllBlack); }
-		uint64_t Rooks(PieceColor color) const { return m_Rooks & (color == PieceColor::White ? m_AllWhite : m_AllBlack); }
-		uint64_t Queens(PieceColor color) const { return m_Queens & (color == PieceColor::White ? m_AllWhite : m_AllBlack); }
-		uint64_t Kings(PieceColor color) const { return m_Kings & (color == PieceColor::White ? m_AllWhite : m_AllBlack); }
+		uint64_t Pawns(bool isWhite) const { return m_Pawns & (isWhite ? m_AllWhite : m_AllBlack); }
+		uint64_t Knights(bool isWhite) const { return m_Knights & (isWhite ? m_AllWhite : m_AllBlack); }
+		uint64_t Bishops(bool isWhite) const { return m_Bishops & (isWhite ? m_AllWhite : m_AllBlack); }
+		uint64_t Rooks(bool isWhite) const { return m_Rooks & (isWhite ? m_AllWhite : m_AllBlack); }
+		uint64_t Queens(bool isWhite) const { return m_Queens & (isWhite ? m_AllWhite : m_AllBlack); }
+		uint64_t Kings(bool isWhite) const { return m_Kings & (isWhite ? m_AllWhite : m_AllBlack); }
 
-		int KingSquare(PieceColor color) const { return std::countr_zero(Kings(color)); }
+		int KingSquare(bool isWhite) const { return std::countr_zero(Kings(isWhite)); }
 
-		bool IsSquareAttacked(int square, PieceColor attacker) const;
+		bool IsSquareAttacked(int square, bool isWhite) const;
 
-		bool IsCheck(PieceColor attacker) const;
-		bool IsCheckmate(PieceColor attacker) const { return IsCheck(attacker) && GenerateLegalMoves().empty(); }
-		bool IsStalemate(PieceColor attacker) const { return !IsCheck(attacker) && GenerateLegalMoves().empty(); }
+		bool IsCheck(bool isWhite) const;
+		bool IsCheckmate(bool isWhite = true) const { return IsCheck(isWhite) && GenerateLegalMoves().empty(); }
+		bool IsStalemate(bool isWhite = true) const { return !IsCheck(isWhite) && GenerateLegalMoves().empty(); }
 	public:
 		constexpr static uint64_t FileA = 0x0101010101010101ull;
 		constexpr static uint64_t FileH = 0x8080808080808080ull;
@@ -85,7 +87,7 @@ namespace Valor {
 		uint64_t m_AllWhite, m_AllBlack;
 		uint64_t m_Pawns, m_Knights, m_Bishops, m_Rooks, m_Queens, m_Kings;
 		
-		PieceColor m_Turn;
+		bool m_IsWhiteTurn;
 		uint8_t m_EnPassantFile;
 		std::array<bool, 4> m_CastlingRights;  // [white/black][king/queen]
 

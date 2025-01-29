@@ -7,15 +7,15 @@ namespace Valor {
 
 	float PieceValueEvaluator::Evaluate(const Board& board)
 	{
-		if (board.IsCheckmate(SWAP_COLOR(board.GetTurn())))
-			return board.GetTurn() == PieceColor::White ? std::numeric_limits<float>::infinity() : -std::numeric_limits<float>::infinity();
-		else if (board.IsStalemate(SWAP_COLOR(board.GetTurn())))
+		if (board.IsCheckmate(false))
+			return board.IsWhiteTurn() ? std::numeric_limits<float>::infinity() : -std::numeric_limits<float>::infinity();
+		else if (board.IsStalemate(false))
 			return 0.0f;
 
 		float score = 0.0f;
 
-		uint64_t allWhite = board.AllPieces(PieceColor::White);
-		uint64_t allBlack = board.AllPieces(PieceColor::Black);
+		uint64_t allWhite = board.WhitePieces();
+		uint64_t allBlack = board.BlackPieces();
 
 		uint64_t pawns = board.Pawns();
 		score += std::popcount(pawns & allWhite) - std::popcount(pawns & allBlack);
