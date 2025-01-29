@@ -57,10 +57,10 @@ namespace Valor {
 		}
 
 		// Handle castling
-		if (pieceType == PieceType::King) {
-			if (std::abs(target.GetFile() - source.GetFile()) == 2) {
+		if (pieceType == PieceType::King)
+		{
+			if (std::abs(target.GetFile() - source.GetFile()) == 2)
 				flags |= Move::castlingFlag;
-			}
 		}
 
 		return Move(source, target, flags, promotion, pieceType, capturedPiece);

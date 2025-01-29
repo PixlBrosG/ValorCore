@@ -15,38 +15,19 @@ namespace Valor {
 		float score = 0.0f;
 
 		uint64_t allWhite = board.AllPieces(PieceColor::White);
+		uint64_t allBlack = board.AllPieces(PieceColor::Black);
 
 		uint64_t pawns = board.Pawns();
-		while (pawns)
-		{
-			int square = std::countr_zero(pawns);
-			score += 1.0f * (allWhite & (1ULL << square) ? 1 : -1);
-			pawns &= pawns - 1;
-		}
+		score += std::popcount(pawns & allWhite) - std::popcount(pawns & allBlack);
 
 		uint64_t knightsAndBishops = board.Knights() | board.Bishops();
-		while (knightsAndBishops)
-		{
-			int square = std::countr_zero(knightsAndBishops);
-			score += 3.0f * (allWhite & (1ULL << square) ? 1 : -1);
-			knightsAndBishops &= knightsAndBishops - 1;
-		}
+		score += 3 * (std::popcount(knightsAndBishops & allWhite) - std::popcount(knightsAndBishops & allBlack));
 
 		uint64_t rooks = board.Rooks();
-		while (rooks)
-		{
-			int square = std::countr_zero(rooks);
-			score += 5.0f * (allWhite & (1ULL << square) ? 1 : -1);
-			rooks &= rooks - 1;
-		}
+		score += 5 * (std::popcount(rooks & allWhite) - std::popcount(rooks & allBlack));
 
 		uint64_t queens = board.Queens();
-		while (queens)
-		{
-			int square = std::countr_zero(queens);
-			score += 9.0f * (allWhite & (1ULL << square) ? 1 : -1);
-			queens &= queens - 1;
-		}
+		score += 9 * (std::popcount(queens & allWhite) - std::popcount(queens & allBlack));
 
 		return score;
 	}
