@@ -161,82 +161,123 @@ namespace Valor {
 	std::vector<Move> MoveGenerator::GeneratePseudoLegalMoves(const Board& board, PieceColor turn)
 	{
 		std::vector<Move> moves;
-		moves.reserve(200); // Preallocate sufficient space for efficiency
+		moves.reserve(100);
 
 		// Pawn moves
 		uint64_t pawnMoves = GeneratePawnMoveBitboard(board, turn);
-		auto pawnMoveList = GenerateMovesFromBitboard(board, pawnMoves, PieceType::Pawn, turn);
+		auto pawnMoveList = GeneratePawnMovesFromBitboard(board, pawnMoves,  turn);
 		moves.insert(moves.end(), pawnMoveList.begin(), pawnMoveList.end());
 
 		uint64_t pawnCaptures = GeneratePawnCaptureBitboard(board, turn);
-		auto pawnCaptureList = GenerateMovesFromBitboard(board, pawnCaptures, PieceType::Pawn, turn);
+		auto pawnCaptureList = GeneratePawnMovesFromBitboard(board, pawnCaptures, turn);
 		moves.insert(moves.end(), pawnCaptureList.begin(), pawnCaptureList.end());
 
 		uint64_t enPassantMoves = GenerateEnPassantMoveBitboard(board, turn);
-		auto enPassantList = GenerateMovesFromBitboard(board, enPassantMoves, PieceType::Pawn, turn);
+		auto enPassantList = GeneratePawnMovesFromBitboard(board, enPassantMoves, turn);
 		moves.insert(moves.end(), enPassantList.begin(), enPassantList.end());
 
 		// Knight moves
 		uint64_t knightMoves = GenerateKnightMoveBitboard(board, turn);
-		auto knightMoveList = GenerateMovesFromBitboard(board, knightMoves, PieceType::Knight, turn);
+		auto knightMoveList = GeneratePieceMovesFromBitboard(board, knightMoves, PieceType::Knight, turn);
 		moves.insert(moves.end(), knightMoveList.begin(), knightMoveList.end());
 
 		// Sliding moves (Bishop, Rook, Queen)
 		uint64_t bishopMoves = GenerateSlidingMoveBitboard(board, PieceType::Bishop, turn);
-		auto bishopMoveList = GenerateMovesFromBitboard(board, bishopMoves, PieceType::Bishop, turn);
+		auto bishopMoveList = GeneratePieceMovesFromBitboard(board, bishopMoves, PieceType::Bishop, turn);
 		moves.insert(moves.end(), bishopMoveList.begin(), bishopMoveList.end());
 
 		uint64_t rookMoves = GenerateSlidingMoveBitboard(board, PieceType::Rook, turn);
-		auto rookMoveList = GenerateMovesFromBitboard(board, rookMoves, PieceType::Rook, turn);
+		auto rookMoveList = GeneratePieceMovesFromBitboard(board, rookMoves, PieceType::Rook, turn);
 		moves.insert(moves.end(), rookMoveList.begin(), rookMoveList.end());
 
 		uint64_t queenMoves = GenerateSlidingMoveBitboard(board, PieceType::Queen, turn);
-		auto queenMoveList = GenerateMovesFromBitboard(board, queenMoves, PieceType::Queen, turn);
+		auto queenMoveList = GeneratePieceMovesFromBitboard(board, queenMoves, PieceType::Queen, turn);
 		moves.insert(moves.end(), queenMoveList.begin(), queenMoveList.end());
 
 		// King moves
 		uint64_t kingMoves = GenerateKingMoveBitboard(board, turn);
-		auto kingMoveList = GenerateMovesFromBitboard(board, kingMoves, PieceType::King, turn);
+		auto kingMoveList = GeneratePieceMovesFromBitboard(board, kingMoves, PieceType::King, turn);
 		moves.insert(moves.end(), kingMoveList.begin(), kingMoveList.end());
 
 		// Castling moves
 		uint64_t castlingMoves = GenerateCastlingMoveBitboard(board, turn);
-		auto castlingMoveList = GenerateMovesFromBitboard(board, castlingMoves, PieceType::King, turn);
+		auto castlingMoveList = GeneratePieceMovesFromBitboard(board, castlingMoves, PieceType::King, turn);
 		moves.insert(moves.end(), castlingMoveList.begin(), castlingMoveList.end());
 
 		return moves;
 	}
 
-	std::vector<Move> MoveGenerator::GenerateMovesFromBitboard(const Board& board, uint64_t bitboard, PieceType pieceType, PieceColor turn)
+	std::vector<Move> MoveGenerator::GeneratePawnMovesFromBitboard(const Board& board, uint64_t bitboard, PieceColor turn)
 	{
 		std::vector<Move> moves;
-
-		uint64_t pieces = board.GetPieceBitboard(turn, pieceType);
-
-		while (pieces) {
-			// Get the index of the current piece's square
-			int sourceSquare = std::countr_zero(pieces);
+		uint64_t pawns = board.Pawns(turn);
+		while (pawns)
+		{
+			int sourceSquare = std::countr_zero(pawns);
 			Tile source(sourceSquare);
-
-			// Get the target squares for the current piece
-			uint64_t targets = bitboard & board.GetMoveMask(sourceSquare, pieceType);
-
-			while (targets) {
+			uint64_t targets = bitboard & board.GetMoveMask(sourceSquare, PieceType::Pawn);
+			while (targets)
+			{
 				int targetSquare = std::countr_zero(targets);
 				Tile target(targetSquare);
-
-				// Add the move to the list
 				if (!(board.PlayerPieces() & (1ULL << targetSquare)))
-					moves.emplace_back(board.BasicParseMove(source, target));
+				{
+					uint8_t flags = 0;
+					PieceType promotion = PieceType::None;
 
-				// Clear the least significant bit in the targets
+					// Check capture
+					if (board.OpponentPieces() & (1ULL << targetSquare))
+						flags |= Move::captureFlag;
+
+					// Check promotion (default to queen)
+					if (target.GetRank() == (turn == PieceColor::White ? 7 : 0))
+					{
+						flags |= Move::promotionFlag;
+						promotion = PieceType::Queen;
+					}
+
+					// Check en passant
+					if (target == board.GetEnPassantTarget())
+					{
+						flags |= Move::enPassantFlag;
+					}
+
+					moves.emplace_back(source, target, flags, promotion, PieceType::Pawn);
+				}
 				targets &= targets - 1;
 			}
+			pawns &= pawns - 1;
+		}
+		return moves;
+	}
 
-			// Clear the least significant bit in the pieces
+	std::vector<Move> MoveGenerator::GeneratePieceMovesFromBitboard(const Board& board, uint64_t bitboard, PieceType type, PieceColor turn)
+	{
+		std::vector<Move> moves;
+		uint64_t pieces = board.GetPieceBitboard(turn, type);
+
+		while (pieces)
+		{
+			int sourceSquare = std::countr_zero(pieces);
+			Tile source(sourceSquare);
+			uint64_t targets = bitboard & board.GetMoveMask(sourceSquare, type);
+			while (targets)
+			{
+				int targetSquare = std::countr_zero(targets);
+				Tile target(targetSquare);
+				if (!(board.PlayerPieces() & (1ULL << targetSquare)))
+				{
+					uint8_t flags = 0;
+
+					if (board.OpponentPieces() & (1ULL << targetSquare))
+						flags |= Move::captureFlag;
+
+					moves.emplace_back(source, target, flags, PieceType::None, type);
+				}
+				targets &= targets - 1;
+			}
 			pieces &= pieces - 1;
 		}
-
 		return moves;
 	}
 

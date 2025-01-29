@@ -82,7 +82,7 @@ int main()
 	}
 
 	std::cout << std::endl;
-#elif 0
+#elif 1
 	using namespace Valor;
 
 	bool playerTurn = true;
@@ -125,7 +125,7 @@ int main()
 		{
 			// Bot's move
 			std::cout << "Bot is thinking...\n";
-			Move bestMove = engine.FindBestMove(4);  // Adjust depth as needed
+			Move bestMove = engine.FindBestMove(6);  // Adjust depth as needed
 			bestMove = engine.GetGame()->GetBoard().ParseMove(bestMove.GetSource(), bestMove.GetTarget());
 			engine.MakeMove(bestMove);
 

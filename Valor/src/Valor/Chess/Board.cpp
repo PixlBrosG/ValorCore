@@ -339,10 +339,13 @@ namespace Valor {
 
 	bool Board::IsSquareAttacked(int square, PieceColor attacker) const
 	{
+		uint64_t pawns = Pawns(attacker);
+		uint64_t queens = Queens(attacker);
+
 		// Pawns
 		uint64_t pawnAttacks = (attacker == PieceColor::White)
-			? ((Pawns(attacker) << 7) & ~FileH) | ((Pawns(attacker) << 9) & ~FileA)
-			: ((Pawns(attacker) >> 7) & ~FileA) | ((Pawns(attacker) >> 9) & ~FileH);
+			? ((pawns << 7) & ~FileH) | ((pawns << 9) & ~FileA)
+			: ((pawns >> 7) & ~FileA) | ((pawns >> 9) & ~FileH);
 		if (pawnAttacks & (1ULL << square)) return true;
 
 		// Knights
@@ -353,13 +356,11 @@ namespace Valor {
 
 		// Sliding Pieces
 		uint64_t blockers = Occupied();
-		if (MagicBitboard::GetSlidingAttack(square, blockers, PieceType::Rook) & Rooks(attacker)) return true;
-		if (MagicBitboard::GetSlidingAttack(square, blockers, PieceType::Bishop) & Bishops(attacker)) return true;
-		if (MagicBitboard::GetSlidingAttack(square, blockers, PieceType::Queen) & Queens(attacker)) return true;
+		if (MagicBitboard::CalculateRookAttacks(square, blockers) & (Rooks(attacker) | queens)) return true;
+		if (MagicBitboard::CalculateBishopAttacks(square, blockers) & (Bishops(attacker) | queens)) return true;
 
 		return false;
 	}
-
 
 	bool Board::IsCheck(PieceColor attacker) const
 	{

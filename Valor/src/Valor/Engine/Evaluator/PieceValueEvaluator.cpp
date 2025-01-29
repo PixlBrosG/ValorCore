@@ -8,7 +8,7 @@ namespace Valor {
 	float PieceValueEvaluator::Evaluate(const Board& board)
 	{
 		if (board.IsCheckmate(SWAP_COLOR(board.GetTurn())))
-			return board.GetTurn() == PieceColor::White ? -std::numeric_limits<float>::infinity() : std::numeric_limits<float>::infinity();
+			return board.GetTurn() == PieceColor::White ? std::numeric_limits<float>::infinity() : -std::numeric_limits<float>::infinity();
 		else if (board.IsStalemate(SWAP_COLOR(board.GetTurn())))
 			return 0.0f;
 

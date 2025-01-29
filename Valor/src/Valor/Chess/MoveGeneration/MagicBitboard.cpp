@@ -74,12 +74,12 @@ namespace Valor {
 				// Stop if the square goes out of bounds
 				if (sq < 0 || sq >= 64) break;
 
-				// Ensure sliding doesn't wrap around the board edges
-				int fromRank = square / 8;
-				int toRank = sq / 8;
+				// Horizontal moves: ensure sliding doesn't wrap across ranks
+				if ((direction == 1 || direction == -1) && (sq / 8 != square / 8)) break;
 
-				// Horizontal moves (left/right)
-				if ((direction == 1 || direction == -1) && fromRank != toRank) break;
+				// Diagonal moves: ensure sliding doesn't wrap across files
+				if ((direction == -9 || direction == -7 || direction == 7 || direction == 9) &&
+					std::abs((sq % 8) - (square % 8)) != std::abs((sq / 8) - (square / 8))) break;
 
 				// Add the attack to the bitboard
 				attacks |= (1ULL << sq);
@@ -91,7 +91,6 @@ namespace Valor {
 
 		return attacks;
 	}
-
 
 	uint64_t MagicBitboard::CalculateRookAttacks(int square, uint64_t blockers) {
 		static const int rookDirections[4] = { 1, -1, 8, -8 }; // Right, left, up, down

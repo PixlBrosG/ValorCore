@@ -12,13 +12,13 @@ namespace Valor {
 	{
 		uint64_t Data;
 
-		Move(Tile source, Tile target, uint16_t flags = 0, PieceType promotion = PieceType::None, PieceType pieceType = PieceType::None, PieceType capturedPiece = PieceType::None,
+		Move(Tile source, Tile target, uint8_t flags = 0, PieceType promotion = PieceType::None, PieceType pieceType = PieceType::None, PieceType capturedPiece = PieceType::None,
 			uint8_t disambiguityRank = 0, uint8_t disambiguityFile = 0, uint8_t pawnCaptureFile = 0, uint16_t evaluation = 0);
 
 		// Getters
 		Tile GetSource() const { return Tile((Data >> 58) & 0b111111); }
 		Tile GetTarget() const { return Tile((Data >> 52) & 0b111111); }
-		uint16_t GetFlags() const { return (Data >> 46) & 0b111111; }
+		uint8_t GetFlags() const { return (Data >> 46) & 0b111111; }
 		PieceType GetPromotion() const { return static_cast<PieceType>((Data >> 42) & 0b1111); }
 		PieceType GetPieceType() const { return static_cast<PieceType>((Data >> 38) & 0b1111); }
 		PieceType GetCapturedPiece() const { return static_cast<PieceType>((Data >> 34) & 0b1111); }
@@ -36,12 +36,12 @@ namespace Valor {
 		bool IsCheckmate() const { return GetFlags() & checkmateFlag; }
 
 		// Flags definition
-		constexpr static uint16_t captureFlag = 0b000001;
-		constexpr static uint16_t castlingFlag = 0b000010;
-		constexpr static uint16_t promotionFlag = 0b000100;
-		constexpr static uint16_t enPassantFlag = 0b001000;
-		constexpr static uint16_t checkFlag = 0b010000;
-		constexpr static uint16_t checkmateFlag = 0b100000;
+		constexpr static uint8_t captureFlag = 0b000001;
+		constexpr static uint8_t castlingFlag = 0b000010;
+		constexpr static uint8_t promotionFlag = 0b000100;
+		constexpr static uint8_t enPassantFlag = 0b001000;
+		constexpr static uint8_t checkFlag = 0b010000;
+		constexpr static uint8_t checkmateFlag = 0b100000;
 
 		// Metadata sizes
 		constexpr static uint8_t sourceBits = 6;

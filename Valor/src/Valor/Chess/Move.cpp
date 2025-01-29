@@ -7,7 +7,7 @@
 
 namespace Valor {
 
-	Move::Move(Tile source, Tile target, uint16_t flags, PieceType promotion, PieceType pieceType, PieceType capturedPiece,
+	Move::Move(Tile source, Tile target, uint8_t flags, PieceType promotion, PieceType pieceType, PieceType capturedPiece,
 		uint8_t disambiguityRank, uint8_t disambiguityFile, uint8_t pawnCaptureFile, uint16_t evaluation)
 	{
 		Data = 0;

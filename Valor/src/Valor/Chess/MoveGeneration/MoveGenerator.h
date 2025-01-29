@@ -33,7 +33,8 @@ namespace Valor {
 		static uint64_t GenerateKingMoveBitboard(const Board& board, PieceColor turn);
 		static uint64_t GenerateCastlingMoveBitboard(const Board& board, PieceColor turn);
 
-		static std::vector<Move> GenerateMovesFromBitboard(const Board& board, uint64_t bitboard, PieceType pieceType, PieceColor turn);
+		static std::vector<Move> GeneratePawnMovesFromBitboard(const Board& board, uint64_t bitboard, PieceColor turn);
+		static std::vector<Move> GeneratePieceMovesFromBitboard(const Board& board, uint64_t bitboard, PieceType type, PieceColor turn);
 
 		static void PrecomputeKingAttackMask();
 		static void PrecomputeKnightAttackMask();
