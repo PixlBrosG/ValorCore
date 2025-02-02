@@ -3,31 +3,34 @@
 
 #include <bit>
 
-namespace Valor {
+namespace Valor::Engine {
 
-	float PieceValueEvaluator::Evaluate(const Board& board)
+	int PieceValueEvaluator::Evaluate(const Board& board)
 	{
-		if (board.IsCheckmate(false))
-			return board.IsWhiteTurn() ? std::numeric_limits<float>::infinity() : -std::numeric_limits<float>::infinity();
-		else if (board.IsStalemate(false))
-			return 0.0f;
+		if (board.IsCheckmate())
+			return board.IsWhiteTurn() ? -MateScore : MateScore;
+		else if (board.IsStalemate())
+			return 0;
 
-		float score = 0.0f;
+		int score = 0;
 
 		uint64_t allWhite = board.WhitePieces();
 		uint64_t allBlack = board.BlackPieces();
 
 		uint64_t pawns = board.Pawns();
-		score += std::popcount(pawns & allWhite) - std::popcount(pawns & allBlack);
+		score += PawnValue * (std::popcount(pawns & allWhite) - std::popcount(pawns & allBlack));
 
-		uint64_t knightsAndBishops = board.Knights() | board.Bishops();
-		score += 3 * (std::popcount(knightsAndBishops & allWhite) - std::popcount(knightsAndBishops & allBlack));
+		uint64_t knights = board.Knights();
+		score += KnightValue * (std::popcount(knights & allWhite) - std::popcount(knights & allBlack));
+
+		uint64_t bishops = board.Bishops();
+		score += BishopValue * (std::popcount(bishops & allWhite) - std::popcount(bishops & allBlack));
 
 		uint64_t rooks = board.Rooks();
-		score += 5 * (std::popcount(rooks & allWhite) - std::popcount(rooks & allBlack));
+		score += RookValue * (std::popcount(rooks & allWhite) - std::popcount(rooks & allBlack));
 
 		uint64_t queens = board.Queens();
-		score += 9 * (std::popcount(queens & allWhite) - std::popcount(queens & allBlack));
+		score += QueenValue * (std::popcount(queens & allWhite) - std::popcount(queens & allBlack));
 
 		return score;
 	}

@@ -19,13 +19,10 @@ namespace Valor {
 		void UndoMove();
 
 		// Game state
-		bool IsDraw() const { return m_Board.IsStalemate(m_Board.IsWhiteTurn()) || m_Board.IsFiftyMoveRule() || IsThreefoldRepetition() || IsInsufficientMaterial(); }
-		bool IsGameOver() const { return m_Board.IsCheckmate(m_Board.IsWhiteTurn()) || IsDraw(); }
+		bool IsDraw() const { return m_Board.IsStalemate() || m_Board.IsFiftyMoveRule() || IsThreefoldRepetition() || m_Board.IsInsufficientMaterial(); }
+		bool IsGameOver() const { return m_Board.IsCheckmate() || IsDraw(); }
 
 		bool IsThreefoldRepetition() const;
-		bool IsInsufficientMaterial() const;
-
-		Game CreateSnapshot() const;
 
 		// Getters
 		const Board& GetBoard() const { return m_Board; }

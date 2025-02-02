@@ -19,6 +19,8 @@ namespace Valor {
 		uint8_t GetRank() const { return TileIndex / 8; }
 		uint8_t GetFile() const { return TileIndex % 8; }
 
+		bool IsValid() const { return TileIndex < 64; }
+
 		std::string ToAlgebraic() const;
 		static Tile FromAlgebraic(const std::string& algebraic);
 

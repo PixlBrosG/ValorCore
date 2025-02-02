@@ -22,8 +22,7 @@ namespace Valor {
 		void Reset();
 
 		MoveInfo ParseMove(Tile source, Tile target) const;
-		void ApplyMove(Move move);
-		bool IsLegalMove(Move move) const;
+		void MakeMove(Move move);
 
 		bool IsAmbiguousMove(Tile source, Tile target, PieceType pieceType) const;
 		void ResolveDisambiguity(Tile source, Tile target, PieceType pieceType, uint8_t& disambiguityRank, uint8_t& disambiguityFile) const;
@@ -36,11 +35,10 @@ namespace Valor {
 
 		void UpdateCastlingRights(Tile source, Tile target);
 		bool IsFiftyMoveRule() const { return m_HalfmoveCounter >= 100; }
+		bool IsInsufficientMaterial() const;
 
 		uint8_t GetEnPassantFile() const { return m_EnPassantFile; }
-		bool GetCastlingRights(bool isWhite, bool kingSide) const { return m_CastlingRights[(isWhite ? 0ull : 2ull) + kingSide]; }
-
-		uint64_t GetMoveMask(int square, PieceType type) const;
+		bool CanCastle(bool isWhite, bool kingSide) const { return m_CastlingRights[(isWhite ? 0ull : 2ull) + kingSide]; }
 
 		Piece GetPiece(Tile tile) const;
 		Piece GetPiece(int rank, int file) const { return GetPiece(Tile(rank, file)); }
@@ -72,19 +70,17 @@ namespace Valor {
 		uint64_t Queens(bool isWhite) const { return m_Queens & (isWhite ? m_AllWhite : m_AllBlack); }
 		uint64_t Kings(bool isWhite) const { return m_Kings & (isWhite ? m_AllWhite : m_AllBlack); }
 
-		int KingSquare(bool isWhite) const { return std::countr_zero(Kings(isWhite)); }
+		int GetKingSquare(bool isWhite) const;
 
-		bool IsSquareAttacked(int square, bool isWhite) const;
+		bool IsCheck(bool isDefending = true) const;
+		bool IsCheckmate() const;
+		bool IsStalemate() const;
 
-		bool IsCheck(bool isWhiteAttacker) const { return IsSquareAttacked(KingSquare(!isWhiteAttacker), isWhiteAttacker); }
-		bool IsCheckmate(bool isWhiteAttacker) const { return  IsCheck(isWhiteAttacker) && GenerateLegalMoves(!isWhiteAttacker).empty(); }
-		bool IsStalemate(bool isWhiteAttacker) const { return !IsCheck(isWhiteAttacker) && GenerateLegalMoves(!isWhiteAttacker).empty(); }
+		bool IsLegalMove(Move move) const;
+		bool IsSquareAttacked(Tile square, bool isWhite) const;
 	public:
 		constexpr static uint64_t FileA = 0x0101010101010101ull;
 		constexpr static uint64_t FileH = 0x8080808080808080ull;
-	private:
-		std::vector<Move> GenerateLegalMoves(bool isWhiteTurn) const;
-		std::vector<Move> GenerateLegalMoves() const { return GenerateLegalMoves(m_IsWhiteTurn); }
 	private:
 		uint64_t m_AllWhite, m_AllBlack;
 		uint64_t m_Pawns, m_Knights, m_Bishops, m_Rooks, m_Queens, m_Kings;

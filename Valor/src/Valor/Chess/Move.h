@@ -33,6 +33,11 @@ namespace Valor {
 		{
 		}
 
+		bool operator==(const Move& other) const
+		{
+			return Source == other.Source && Target == other.Target;
+		}
+
 		// Flags
 		bool IsCapture()   const { return Flags & MoveFlags::Capture;   }
 		bool IsCastling()  const { return Flags & MoveFlags::Castling;  }
@@ -40,6 +45,8 @@ namespace Valor {
 		bool IsEnPassant() const { return Flags & MoveFlags::EnPassant; }
 		bool IsCheck()     const { return Flags & MoveFlags::Check;     }
 		bool IsCheckmate() const { return Flags & MoveFlags::Checkmate; }
+
+		bool IsValid() const { return Source.IsValid() && Target.IsValid(); }
 
 		std::string ToAlgebraic() const;
 		static Move FromAlgebraic(const std::string& algebraic);

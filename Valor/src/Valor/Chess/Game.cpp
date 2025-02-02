@@ -1,7 +1,7 @@
 #include "vlpch.h"
 #include "Valor/Chess/Game.h"
 
-#include "Valor/Chess/MoveGeneration/MoveGenerator.h"
+#include "Valor/Chess/MoveGeneration/MoveGeneratorSimple.h"
 
 #include <iostream>
 #include <algorithm>
@@ -26,7 +26,7 @@ namespace Valor {
 		m_MoveHistory.emplace_back(move);
 		m_BoardHistory.emplace_back(m_Board);
 
-		m_Board.ApplyMove(move);
+		m_Board.MakeMove(move);
 
 		// Update the board history hash
 		// TODO
@@ -50,57 +50,6 @@ namespace Valor {
 	{
 		return std::any_of(m_BoardHistoryHashes.begin(), m_BoardHistoryHashes.end(),
 			[](const std::pair<size_t, int>& pair) { return pair.second >= 3; });
-	}
-
-	bool Game::IsInsufficientMaterial() const
-	{
-		int whitePieces = 0, blackPieces = 0;
-		bool whiteHasBishop = false, whiteHasKnight = false;
-		bool blackHasBishop = false, blackHasKnight = false;
-
-		for (int rank = 0; rank < 8; rank++)
-		{
-			for (int file = 0; file < 8; file++)
-			{
-				const Piece& piece = m_Board.GetPiece(rank, file);
-				if (piece.Type != PieceType::None)
-				{
-					if (piece.Color == PieceColor::White)
-					{
-						whitePieces++;
-						if (piece.Type == PieceType::Bishop)
-							whiteHasBishop = true;
-						else if (piece.Type == PieceType::Knight)
-							whiteHasKnight = true;
-					}
-					else
-					{
-						blackPieces++;
-						if (piece.Type == PieceType::Bishop)
-							blackHasBishop = true;
-						else if (piece.Type == PieceType::Knight)
-							blackHasKnight = true;
-					}
-				}
-			}
-		}
-
-		if (whitePieces <= 1 && blackPieces <= 1) return true;
-		if (whitePieces == 1 && blackPieces == 2 && blackHasBishop) return true;
-		if (whitePieces == 1 && blackPieces == 2 && blackHasKnight) return true;
-		if (blackPieces == 2 && whitePieces == 1 && whiteHasBishop) return true;
-		if (blackPieces == 2 && whitePieces == 1 && whiteHasKnight) return true;
-
-		return false;
-	}
-
-	Game Game::CreateSnapshot() const
-	{
-		Game snapshot;
-		snapshot.m_Board = this->m_Board;
-
-		// Do not copy move or board history
-		return snapshot;
 	}
 
 }

@@ -36,6 +36,7 @@ namespace Valor {
 		constexpr static char PieceTypeToChar(PieceType type);
 
 		constexpr static PieceColor GetOppositeColor(PieceColor color);
+		constexpr static PieceColor GetPieceColor(bool isWhite);
 
 		constexpr static bool IsSlidingPiece(PieceType type);
 		constexpr static bool IsMinorPiece(PieceType type);
@@ -60,10 +61,15 @@ namespace Valor {
 	{
 		switch (color)
 		{
-		case PieceColor::White: return PieceColor::Black;
-		case PieceColor::Black: return PieceColor::White;
-		default: return PieceColor::None;
+			case PieceColor::White: return PieceColor::Black;
+			case PieceColor::Black: return PieceColor::White;
+			default: return PieceColor::None;
 		}
+	}
+
+	constexpr PieceColor Piece::GetPieceColor(bool isWhite)
+	{
+		return isWhite ? PieceColor::White : PieceColor::Black;
 	}
 
 	constexpr bool Piece::IsSlidingPiece(PieceType type)

@@ -1,36 +1,42 @@
 #include "vlpch.h"
 #include "Valor/Engine/Minimax.h"
 
-#include "Valor/Chess/MoveGeneration/MoveGenerator.h"
+#include "Valor/Chess/MoveGeneration/MoveGeneratorSimple.h"
 
 namespace Valor::Engine {
 
-	Move Minimax::FindBestMove(Game game, int maxDepth, Evaluator* evaluator)
+	Move Minimax::FindBestMove(Board& board, int maxDepth, Evaluator* evaluator)
 	{
 		m_MaxDepth = maxDepth;
 		m_Evaluator = evaluator;
 		m_BestMove = Move(Tile::None, Tile::None);
 
-		constexpr float alpha = -std::numeric_limits<float>::infinity();
-		constexpr float beta = std::numeric_limits<float>::infinity();
+		constexpr int alpha = std::numeric_limits<int>::min();
+		constexpr int beta = std::numeric_limits<int>::max();
 
-		Run(game, maxDepth, alpha, beta, game.GetBoard().IsWhiteTurn());
+		Run(board, maxDepth, alpha, beta, board.IsWhiteTurn());
 
 		return m_BestMove;
 	}
 
-	float Minimax::Run(Game& game, int depth, float alpha, float beta, bool isMaximizing)
+	int Minimax::Run(Board& board, int depth, int alpha, int beta, bool isMaximizing)
 	{
 		if (depth == 0)
-			return Evaluate(game.GetBoard());
-		float bestValue = isMaximizing ? -std::numeric_limits<float>::infinity()
-			: std::numeric_limits<float>::infinity();
-		auto moves = MoveGenerator::GenerateLegalMoves(game.GetBoard(), game.GetBoard().IsWhiteTurn());
+			return Evaluate(board);
+
+		int bestValue = isMaximizing ? std::numeric_limits<int>::min() : std::numeric_limits<int>::max();
+
+		std::vector<Move> moves = MoveGeneratorSimple::GenerateLegalMoves(board);
+		if (moves.empty())
+			return isMaximizing ? std::numeric_limits<int>::min() + (m_MaxDepth - depth)
+								: std::numeric_limits<int>::max() - (m_MaxDepth - depth);
+
 		for (const Move& move : moves)
 		{
-			game.MakeMove(move);
-			float value = Run(game, depth - 1, alpha, beta, !isMaximizing);
-			game.UndoMove();
+			Board tempBoard = board;
+			tempBoard.MakeMove(move);
+
+			int value = Run(tempBoard, depth - 1, alpha, beta, !isMaximizing);
 			
 			if (isMaximizing)
 			{
