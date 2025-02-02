@@ -30,4 +30,5 @@ group ""
 
 group "Tools"
 	include "ValorCLI"
+	include "MagicBitboardGenerator"
 group ""
