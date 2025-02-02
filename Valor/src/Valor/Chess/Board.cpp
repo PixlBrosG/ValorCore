@@ -110,8 +110,8 @@ namespace Valor {
 		RemovePiece(move.Target); // Only matters if it's a capture
 		PlacePiece(move.Target, piece.Color, piece.Type);
 
-		// Handle en passant - isn't necessarily set, so check if it's a diagonal pawn move
-		if (move.IsEnPassant() || (piece.Type == PieceType::Pawn && move.Source.GetFile() != move.Target.GetFile()))
+		// Handle en passant - isn't necessarily set, so check if it's a diagonal pawn move and the target square is empty
+		if (move.IsEnPassant() || (piece.Type == PieceType::Pawn && move.Source.GetFile() != move.Target.GetFile() && capturedPiece.Type == PieceType::None))
 		{
 			uint8_t enPassantRank = move.Target.GetRank() + (m_IsWhiteTurn ? -1 : 1);
 			Tile enPassantTarget(enPassantRank, move.Target.GetFile());
@@ -122,11 +122,13 @@ namespace Valor {
 		else if (move.IsCastling() || (piece.Type == PieceType::King && std::abs(move.Source.GetFile() - move.Target.GetFile()) == 2))
 		{
 			Tile rookSource, rookTarget;
-			if (move.Target.GetFile() == 2) { // Queen-side castling
+			if (move.Target.GetFile() == 2)
+			{
 				rookSource = Tile(move.Target.GetRank(), 0);
 				rookTarget = Tile(move.Target.GetRank(), 3);
 			}
-			else { // King-side castling
+			else
+			{
 				rookSource = Tile(move.Target.GetRank(), 7);
 				rookTarget = Tile(move.Target.GetRank(), 5);
 			}
@@ -135,10 +137,14 @@ namespace Valor {
 			PlacePiece(rookTarget, rook.Color, rook.Type);
 		}
 
-		// Handle promotion
-		if (move.IsPromotion()) {
+		// Handle promotion - isn't necessarily set, so check if it's a pawn move to the promotion rank
+		if (move.IsPromotion() || (piece.Type == PieceType::Pawn && (move.Target.GetRank() == 0 || move.Target.GetRank() == 7)))
+		{
+			// Default to queen unless specified
+			PieceType promotion = move.Promotion == PieceType::None ? PieceType::Queen : move.Promotion;
+
 			RemovePiece(move.Target);
-			PlacePiece(move.Target, piece.Color, move.Promotion);
+			PlacePiece(move.Target, piece.Color, promotion);
 		}
 
 		// Update en passant target square
@@ -153,7 +159,8 @@ namespace Valor {
 		ToggleTurn();
 	}
 
-	bool Board::IsAmbiguousMove(Tile source, Tile target, PieceType pieceType) const {
+	bool Board::IsAmbiguousMove(Tile source, Tile target, PieceType pieceType) const
+	{
 		uint64_t occupancy = Occupied();
 		uint64_t potentialSources = 0;
 
@@ -240,15 +247,15 @@ namespace Valor {
 
 	void Board::RemovePiece(Tile tile)
 	{
-		uint64_t bit = 1ULL << tile;
-		m_AllWhite &= ~bit;
-		m_AllBlack &= ~bit;
-		m_Pawns &= ~bit;
-		m_Knights &= ~bit;
-		m_Bishops &= ~bit;
-		m_Rooks &= ~bit;
-		m_Queens &= ~bit;
-		m_Kings &= ~bit;
+		uint64_t mask = ~(1ULL << tile);
+		m_AllWhite &= mask;
+		m_AllBlack &= mask;
+		m_Pawns &= mask;
+		m_Knights &= mask;
+		m_Bishops &= mask;
+		m_Rooks &= mask;
+		m_Queens &= mask;
+		m_Kings &= mask;
 	}
 
 	void Board::PlacePiece(Tile tile, PieceColor color, PieceType type)
@@ -260,6 +267,7 @@ namespace Valor {
 			m_AllWhite |= bit;
 		else
 			m_AllBlack |= bit;
+
 		switch (type)
 		{
 			case PieceType::Pawn:   m_Pawns |= bit; break;

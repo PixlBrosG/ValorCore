@@ -154,8 +154,8 @@ namespace Valor {
 		for (int square = 0; square < 64; ++square)
 		{
 			uint64_t bit = 1ULL << square;
-			s_WhitePawnAttacks[square] = ((bit & ~fileA) >> 7) | ((bit & ~fileH) >> 9);
-			s_BlackPawnAttacks[square] = ((bit & ~fileA) << 9) | ((bit & ~fileH) << 7);
+			s_WhitePawnAttacks[square] = ((bit & ~fileA) << 7) | ((bit & ~fileH) << 9);
+			s_BlackPawnAttacks[square] = ((bit & ~fileA) >> 9) | ((bit & ~fileH) >> 7);
 		}
 	}
 
