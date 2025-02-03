@@ -2,6 +2,9 @@
 
 #include "Valor/Chess/Move.h"
 
+#include <vector>
+#include <cstring> // for memset
+
 namespace Valor::Engine {
 
 	enum class TTEntryFlag : unsigned char
@@ -25,6 +28,8 @@ namespace Valor::Engine {
 	class TranspositionTable
 	{
 	public:
+		TranspositionTable() : m_Entries(TTSize) {} // Allocate on heap
+
 		void Store(uint64_t hash, int score, Move bestMove, int depth, TTEntryFlag flag)
 		{
 			m_Entries[hash % TTSize] = { hash, score, bestMove, depth, flag };
@@ -36,12 +41,12 @@ namespace Valor::Engine {
 			return entry.Hash == hash ? &entry : nullptr;
 		}
 
-		void Clear() const
+		void Clear()
 		{
-			memset((void*)m_Entries, 0, sizeof(m_Entries));
+			memset(m_Entries.data(), 0, TTSize * sizeof(TTEntry));
 		}
-	private:
-		TTEntry m_Entries[TTSize];
-	};
 
+	private:
+		std::vector<TTEntry> m_Entries; // Heap allocation
+	};
 }

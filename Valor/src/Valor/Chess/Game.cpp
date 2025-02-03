@@ -15,7 +15,7 @@ namespace Valor {
 
 	void Game::Init()
 	{
-		m_Board = Board();
+		m_Board.Reset();
 		m_MoveHistory.clear();
 		m_BoardHistoryHashes.clear();
 		m_BoardHistory.clear();

@@ -378,6 +378,7 @@ namespace Valor {
 	bool Board::IsCheck(bool isDefending) const
 	{
 		int kingSquare = GetKingSquare(isDefending ? m_IsWhiteTurn : !m_IsWhiteTurn);
+		if (kingSquare == 64) return false; // King not found
 		return IsSquareAttacked(Tile(kingSquare), isDefending ? m_IsWhiteTurn : !m_IsWhiteTurn);
 	}
 
@@ -401,6 +402,8 @@ namespace Valor {
 
 	bool Board::IsSquareAttacked(Tile square, bool isWhite) const
 	{
+		if ((uint8_t)square >= 64) return false; // Invalid square
+
 		uint64_t occupancy = Occupied();
 		uint64_t enemyPieces = isWhite ? m_AllBlack : m_AllWhite;
 

@@ -1,5 +1,10 @@
 #pragma once
 
+#include "Valor/Chess/Move.h"
+#include "Valor/Engine/TranspositionTable.h"
+
+#include <array>
+
 namespace Valor::Engine {
 
 	constexpr int MaxDepth = 8;
@@ -23,7 +28,7 @@ namespace Valor::Engine {
 
 		void Clear();
 	private:
-		int m_HistoryTable[64][64] = {};
+		std::array<std::array<int, 64>, 64> m_History;
 	};
 
 	struct SearchState

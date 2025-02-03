@@ -27,9 +27,15 @@ namespace Valor::Engine {
 		int bestValue = isMaximizing ? std::numeric_limits<int>::min() : std::numeric_limits<int>::max();
 
 		std::vector<Move> moves = MoveGeneratorSimple::GenerateLegalMoves(board);
+
 		if (moves.empty())
-			return isMaximizing ? std::numeric_limits<int>::min() + (m_MaxDepth - depth)
-								: std::numeric_limits<int>::max() - (m_MaxDepth - depth);
+		{
+			if (board.IsCheck(true))
+				return isMaximizing ? std::numeric_limits<int>::min() + (m_MaxDepth - depth)
+				: std::numeric_limits<int>::max() - (m_MaxDepth - depth);
+			else
+				return 0; // Stalemate (Draw)
+		}
 
 		for (const Move& move : moves)
 		{

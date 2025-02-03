@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Valor/Chess/Game.h"
+#include "Valor/Chess/Board.h"
 #include "Valor/Engine/TranspositionTable.h"
 #include "Valor/Engine/SearchState.h"
 
@@ -13,7 +13,7 @@ namespace Valor::Engine {
 		
 		Move SearchBestMove(const Board& board, int depth);
 	private:
-		float AlphaBeta(const Board& board, float alpha, float beta, int depth, bool isMaximizing);
+		int AlphaBeta(const Board& board, int alpha, int beta, int depth, bool isMaximizing);
 		void UpdateKillerMoves(Move move, int depth);
 		void UpdateHistoryHeuristics(Move move, int depth);
 

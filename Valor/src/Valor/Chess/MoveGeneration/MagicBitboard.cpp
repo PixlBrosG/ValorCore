@@ -37,28 +37,17 @@ namespace Valor {
 
 	uint64_t MagicBitboard::GetRookAttacks(int square, uint64_t occupancy)
 	{
-		// Apply occupancy mask
 		uint64_t blockers = occupancy & s_RookBlockerMasks[square];
-
-		// Compute the magic index
 		int index = (blockers * s_RookMagicNumbers[square]) >> (64 - s_RookRelevantBits[square]);
-
-		// Retrieve precomputed attacks
 		return s_RookAttacks[square][index];
 	}
 
 	uint64_t MagicBitboard::GetBishopAttacks(int square, uint64_t occupancy)
 	{
-		// Apply occupancy mask
 		uint64_t blockers = occupancy & s_BishopBlockerMasks[square];
-
-		// Compute the magic index
 		int index = (blockers * s_BishopMagicNumbers[square]) >> (64 - s_BishopRelevantBits[square]);
-
-		// Retrieve precomputed attacks
 		return s_BishopAttacks[square][index];
 	}
-
 
 	// Generate blocker masks for sliding pieces
 	void MagicBitboard::InitBlockerMasks()
@@ -75,9 +64,9 @@ namespace Valor {
 
 	void MagicBitboard::GenerateAttackTables()
 	{
+		// Precompute rook attacks
 		for (int square = 0; square < 64; ++square)
 		{
-			// Generate occupancy variations
 			std::vector<uint64_t> blockerBoards = GenerateBlockerBoards(s_RookBlockerMasks[square]);
 
 			for (uint64_t blockers : blockerBoards)
@@ -87,6 +76,7 @@ namespace Valor {
 			}
 		}
 
+		// Precompute bishop attacks
 		for (int square = 0; square < 64; ++square)
 		{
 			std::vector<uint64_t> blockerBoards = GenerateBlockerBoards(s_BishopBlockerMasks[square]);
@@ -129,7 +119,11 @@ namespace Valor {
 			{
 				int nextSquare = square + dir;
 				if (nextSquare >= 0 && nextSquare < 64)
-					attacks |= (1ULL << nextSquare);
+				{
+					auto [nextRank, nextFile] = GetPosition(nextSquare);
+					if (std::abs(nextRank - rank) <= 1 && std::abs(nextFile - file) <= 1)
+						attacks |= (1ULL << nextSquare);
+				}
 			}
 			s_KingAttacks[square] = attacks;
 		}
@@ -187,8 +181,14 @@ namespace Valor {
 			for (int i = 1; i < 8; ++i)
 			{
 				int nextSquare = square + i * dir;
+
+				auto [nextRank, nextFile] = GetPosition(nextSquare);
+				if ((dir == 1 || dir == -1) && nextRank != rank) break;
+
 				if (nextSquare < 0 || nextSquare >= 64) break;
+
 				attacks |= (1ULL << nextSquare);
+
 				if (blockers & (1ULL << nextSquare)) break;
 			}
 		}
@@ -201,21 +201,29 @@ namespace Valor {
 	{
 		uint64_t attacks = 0;
 		auto [rank, file] = GetPosition(square);
-		int directions[4] = { 9, -9, 7, -7 };
+		int directions[4] = { 7, -7, 9, -9 };
 
 		for (int dir : directions)
 		{
 			for (int i = 1; i < 8; ++i)
 			{
 				int nextSquare = square + i * dir;
+
 				if (nextSquare < 0 || nextSquare >= 64) break;
+
+				auto [nextRank, nextFile] = GetPosition(nextSquare);
+
+				if (std::abs(nextRank - rank) != i || std::abs(nextFile - file) != i) break;
+
 				attacks |= (1ULL << nextSquare);
+
 				if (blockers & (1ULL << nextSquare)) break;
 			}
 		}
 
 		return attacks;
 	}
+
 
 	// Generate all possible blocker bitboards
 	std::vector<uint64_t> MagicBitboard::GenerateBlockerBoards(uint64_t mask)

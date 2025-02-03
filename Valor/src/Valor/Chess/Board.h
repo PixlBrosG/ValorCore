@@ -105,21 +105,32 @@ namespace std {
 		const std::string rankSeparator = "|";
 		const std::string fileLabels = "    A  B  C  D  E  F  G  H";
 
+		// Define colors for pieces and board squares
+		const std::string darkSquare = "\033[48;5;236m";  // Dark gray
+		const std::string lightSquare = "\033[48;5;229m"; // Light yellowish
+		const std::string whitePiece = "\033[1;34m";  // Bright white
+		const std::string blackPiece = "\033[1;30m";  // Bold black
+
+		// Print the file labels
+		os << "\033[1;40m\033[1;37m" << fileLabels << "\033[0m" << std::endl;
+
 		// Print the top edge of the board
 		os << "\033[1;40m\033[1;37m" << topEdge << "\033[0m" << std::endl;
 
 		// Print the board rows
-		for (int rank = 7; rank >= 0; rank--) {
+		for (int rank = 7; rank >= 0; rank--)
+		{
 			os << "\033[1;40m\033[1;37m " << (rank + 1) << rankSeparator;  // Rank number
 
-			for (int file = 0; file < 8; file++) {
+			for (int file = 0; file < 8; file++)
+			{
 				// Determine background color for the tile
 				bool isDarkSquare = (rank + file) % 2 == 0;
-				std::string bgColor = isDarkSquare ? "\033[48;5;235m" : "\033[48;5;15m";  // Dark gray / Bright white
+				std::string bgColor = isDarkSquare ? darkSquare : lightSquare;
 
 				// Get the piece and determine its color
 				const Valor::Piece& piece = board.GetPiece(rank, file);
-				std::string pieceColor = piece.Color == Valor::PieceColor::White ? "\033[1;96m" : "\033[1;90m";  // Bright cyan for white, dark gray for black
+				std::string pieceColor = (piece.Color == Valor::PieceColor::White) ? whitePiece : blackPiece;
 
 				// Print the tile with the piece
 				os << bgColor << pieceColor;
@@ -129,9 +140,8 @@ namespace std {
 			os << "\033[1;40m\033[1;37m" << rankSeparator << (rank + 1) << "\033[0m" << std::endl;  // Rank number again
 
 			// Print middle edge except for the last row
-			if (rank > 0) {
+			if (rank > 0)
 				os << "\033[1;40m\033[1;37m" << midEdge << "\033[0m" << std::endl;
-			}
 		}
 
 		// Print the bottom edge of the board
@@ -144,3 +154,4 @@ namespace std {
 	}
 
 }
+

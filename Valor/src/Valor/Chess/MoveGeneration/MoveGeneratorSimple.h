@@ -10,10 +10,12 @@ namespace Valor::MoveGeneratorSimple {
 	bool IsMoveLegal(const Board& board, Move move);
 
 	void GeneratePawnMoves(const Board& board, std::vector<Move>& moves);
-	uint64_t GetPawnMoves(int square, uint64_t occupied, bool isWhite, int enPassantFile, uint8_t& moveFlags);
+	uint64_t GetPawnMoves(int square, uint64_t occupied, bool isWhite, int enPassantFile);
 
 	void GenerateCastlingMoves(const Board& board, std::vector<Move>& moves);
 
 	inline bool IsPromotionRank(int rank, bool isWhite) { return isWhite ? rank == 7 : rank == 0; }
+
+	std::vector<Move> GenerateMovesForPiece(const Board& board, int square, const Piece& piece);
 
 }

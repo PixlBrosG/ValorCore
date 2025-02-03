@@ -16,7 +16,6 @@ namespace Valor::Engine {
 	{
 	public:
 		virtual ~Evaluator() = default;
-
 		virtual int Evaluate(const Board& board) = 0;
 	};
 
@@ -24,7 +23,13 @@ namespace Valor::Engine {
 	{
 	public:
 		virtual ~PieceValueEvaluator() = default;
+		virtual int Evaluate(const Board& board) override;
+	};
 
+	class PositionalEvaluator : public Evaluator
+	{
+	public:
+		virtual ~PositionalEvaluator() = default;
 		virtual int Evaluate(const Board& board) override;
 	};
 
